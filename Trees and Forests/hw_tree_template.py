@@ -1,6 +1,7 @@
+"""
+
 import csv
 import numpy as np
-
 
 def all_columns(X, rand):
     return range(X.shape[1])
@@ -85,3 +86,5 @@ if __name__ == "__main__":
 
     print("full", hw_tree_full(learn, test))
     print("random forests", hw_randomforests(learn, test))
+
+"""
