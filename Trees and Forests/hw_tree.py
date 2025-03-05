@@ -2,9 +2,10 @@ import csv
 import numpy as np
 import random
 from sklearn.metrics import accuracy_score
+import time
 
 
-def all_columns(X, rand):
+def all_columns(X, rand=None):
     return range(X.shape[1])
 
 
@@ -38,29 +39,33 @@ class Tree:
         probabilities = counts / len(y)
         return 1 - np.sum(probabilities ** 2)
 
+    # Optimizing the split function...
     def best_split(self, X, y):
         best_gini = float('inf')
         best_feature, best_threshold = None, None
 
         for feature in self.get_candidate_columns(X):
-            thresholds = np.unique(X[:, feature])
-            for threshold in thresholds:
-                left_indices = X[:, feature] <= threshold
-                right_indices = X[:, feature] > threshold
+            sorted_indices = np.argsort(X[:, feature])  # Sort feature values once to save redundant comparisons
+            X_sorted, y_sorted = X[sorted_indices, feature], y[sorted_indices]
 
-                if np.sum(left_indices) < self.min_samples or np.sum(right_indices) < self.min_samples:
+            for i in range(1, len(y_sorted)):  # Only check n-1 possible splits
+                if y_sorted[i] == y_sorted[i - 1]:  # Skip redundant splits - duplicate values to avoid unnecessary calculations
                     continue
 
-                gini_left = self.gini_impurity(y[left_indices])
-                gini_right = self.gini_impurity(y[right_indices])
-                weighted_gini = (len(y[left_indices]) * gini_left + len(y[right_indices]) * gini_right) / len(y)
+                threshold = (X_sorted[i] + X_sorted[i - 1]) / 2  # Midpoint threshold
+
+                left_size, right_size = i, len(y_sorted) - i
+                # utilization of numpy operations instead of looping over all unique values..
+                gini_left = 1 - np.sum((np.bincount(y_sorted[:i], minlength=2) / left_size) ** 2)
+                gini_right = 1 - np.sum((np.bincount(y_sorted[i:], minlength=2) / right_size) ** 2)
+
+                weighted_gini = (left_size * gini_left + right_size * gini_right) / len(y_sorted)
 
                 if weighted_gini < best_gini:
-                    best_gini = weighted_gini
-                    best_feature = feature
-                    best_threshold = threshold
+                    best_gini, best_feature, best_threshold = weighted_gini, feature, threshold
 
         return best_feature, best_threshold
+    # best built time: 0.71s (optimized from 6.85s)
 
     def build(self, X, y, depth=0):
         if len(np.unique(y)) == 1 or len(y) < self.min_samples:
@@ -91,10 +96,13 @@ class TreeModel:
         return np.array([self._predict_single(x, self.root) for x in X])
 
     def _predict_single(self, x, node):
-        if not isinstance(node, tuple):
-            return node
-        feature, threshold, left, right = node
-        return self._predict_single(x, left if x[feature] <= threshold else right)
+        if 'prediction' in node:
+            return node['prediction']
+        feature, threshold, left, right = node['feature'], node['threshold'], node['left'], node['right']
+        if x[feature] <= threshold:
+            return self._predict_single(x, left)
+        else:
+            return self._predict_single(x, right)
 
 # ---------------------------------------------------------------
 
@@ -148,8 +156,8 @@ def read_tab(fn, adict):
 
 
 def tki():
-    legend, Xt, yt = read_tab("tki-train.tab", {"Bcr-abl": 1, "Wild type": 0})
-    _, Xv, yv = read_tab("tki-test.tab", {"Bcr-abl": 1, "Wild type": 0})
+    legend, Xt, yt = read_tab("./tki-train.tab", {"Bcr-abl": 1, "Wild type": 0})
+    _, Xv, yv = read_tab("./tki-test.tab", {"Bcr-abl": 1, "Wild type": 0})
     return (Xt, yt), (Xv, yv), legend
 
 
@@ -162,9 +170,16 @@ def hw_tree_full(train, test):
     X_train, y_train = train
     X_test, y_test = test
 
+    start_time = time.time()
+
     # Build the tree with min_samples=2
     tree = Tree(rand=random.Random(), min_samples=2)
     tree_model = TreeModel(tree.build(X_train, y_train))
+
+    end_time = time.time()
+    build_time = end_time - start_time
+
+    print(f"Tree built in {build_time:.2f} seconds")
 
     # Predict on training and testing data
     y_train_pred = tree_model.predict(X_train)
