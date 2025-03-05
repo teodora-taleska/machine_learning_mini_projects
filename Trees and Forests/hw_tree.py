@@ -176,7 +176,6 @@ def hw_tree_full(train, test):
 
     start_time = time.time()
 
-    # Build the tree with min_samples=2
     tree = Tree(rand=random.Random(), min_samples=2)
     tree_model = tree.build(X_train, y_train)
 
@@ -185,15 +184,12 @@ def hw_tree_full(train, test):
 
     print(f"Tree built in {build_time:.2f} seconds")
 
-    # Predict on training and testing data
     y_train_pred = tree_model.predict(X_train)
     y_test_pred = tree_model.predict(X_test)
 
-    # Calculate misclassification rates
     train_misclassification_rate = 1 - accuracy_score(y_train, y_train_pred)
     test_misclassification_rate = 1 - accuracy_score(y_test, y_test_pred)
 
-    # Calculate standard errors
     train_misclassification_error = y_train != y_train_pred
     test_misclassification_error = y_test != y_test_pred
     train_std_error = np.std(train_misclassification_error) / np.sqrt(len(y_train))
