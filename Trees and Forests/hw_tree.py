@@ -1,6 +1,7 @@
 import csv
 import numpy as np
 import random
+from sklearn.metrics import accuracy_score
 
 
 def all_columns(X, rand):
@@ -8,9 +9,8 @@ def all_columns(X, rand):
 
 
 def random_sqrt_columns(X, rand):
-    # select random columns of size sqrt(X.shape[1]) with replacement
-    c = rand.choice(range(X.shape[1]), size=int(np.sqrt(X.shape[1])), replace=True)
-    return c
+    num_features = int(np.sqrt(X.shape[1]))
+    return rand.sample(range(X.shape[1]), num_features)
 
 
 class Tree:
@@ -28,55 +28,60 @@ class Tree:
     def __init__(self, rand=None,
                  get_candidate_columns=all_columns,
                  min_samples=2):
-        self.rand = rand or random.Random(0)
+        self.rand = rand if rand is not None else random.Random()
         self.get_candidate_columns = get_candidate_columns  # needed for random forests
         self.min_samples = min_samples
         self.root = None
 
-    def build(self, X, y):
-        # returns the model as an object (that can do prediction)
-        self.root = self._build_tree(X, y)
-        return TreeModel(self.root)
+    def gini_impurity(self, y):
+        classes, counts = np.unique(y, return_counts=True)
+        probabilities = counts / len(y)
+        return 1 - np.sum(probabilities ** 2)
 
-    def _build_tree(self, X, y):
-        if len(y) < self.min_samples or len(set(y)) == 1:
-            return np.bincount(y).argmax()
+    def best_split(self, X, y):
+        best_gini = float('inf')
+        best_feature, best_threshold = None, None
 
-        best_feature, best_threshold = self._find_best_split(X, y)
-        if best_feature is None:
-            return np.bincount(y).argmax()
-
-        left_indices = X[:, best_feature] <= best_threshold
-        right_indices = ~left_indices
-
-        left_subtree = self._build_tree(X[left_indices], y[left_indices])
-        right_subtree = self._build_tree(X[right_indices], y[right_indices])
-
-        return (best_feature, best_threshold, left_subtree, right_subtree)
-
-    def _find_best_split(self, X, y):
-        best_feature, best_threshold, best_gini = None, None, float('inf')
-        for feature in self.get_candidate_columns(X, self.rand):
+        for feature in self.get_candidate_columns(X):
             thresholds = np.unique(X[:, feature])
             for threshold in thresholds:
-                left_mask = X[:, feature] <= threshold
-                right_mask = ~left_mask
+                left_indices = X[:, feature] <= threshold
+                right_indices = X[:, feature] > threshold
 
-                if left_mask.sum() == 0 or right_mask.sum() == 0:
+                if np.sum(left_indices) < self.min_samples or np.sum(right_indices) < self.min_samples:
                     continue
 
-                gini = self._gini_impurity(y[left_mask], y[right_mask])
-                if gini < best_gini:
-                    best_gini, best_feature, best_threshold = gini, feature, threshold
+                gini_left = self.gini_impurity(y[left_indices])
+                gini_right = self.gini_impurity(y[right_indices])
+                weighted_gini = (len(y[left_indices]) * gini_left + len(y[right_indices]) * gini_right) / len(y)
+
+                if weighted_gini < best_gini:
+                    best_gini = weighted_gini
+                    best_feature = feature
+                    best_threshold = threshold
+
         return best_feature, best_threshold
 
-    def _gini_impurity(self, left_y, right_y):
-        def gini(y):
-            p = np.bincount(y, minlength=2) / len(y)
-            return 1.0 - np.sum(p ** 2)
+    def build(self, X, y, depth=0):
+        if len(np.unique(y)) == 1 or len(y) < self.min_samples:
+            return {'prediction': np.argmax(np.bincount(y))}
 
-        left_size, right_size = len(left_y), len(right_y)
-        return (left_size * gini(left_y) + right_size * gini(right_y)) / (left_size + right_size)
+        feature, threshold = self.best_split(X, y)
+        if feature is None:
+            return {'prediction': np.argmax(np.bincount(y))}
+
+        left_indices = X[:, feature] <= threshold
+        right_indices = X[:, feature] > threshold
+
+        left_subtree = self.build(X[left_indices], y[left_indices], depth + 1)
+        right_subtree = self.build(X[right_indices], y[right_indices], depth + 1)
+
+        return {
+            'feature': feature,
+            'threshold': threshold,
+            'left': left_subtree,
+            'right': right_subtree
+        }
 
 class TreeModel:
     def __init__(self, root):
@@ -148,13 +153,34 @@ def tki():
     return (Xt, yt), (Xv, yv), legend
 
 
-def hw_tree_full(*args, **kwargs):
+def hw_tree_full(train, test):
     """
     In function hw_tree_full, build a tree with min_samples=2.
     Return misclassification rates and standard errors when using training and
     testing data as test sets.
     """
-    pass
+    X_train, y_train = train
+    X_test, y_test = test
+
+    # Build the tree with min_samples=2
+    tree = Tree(rand=random.Random(), min_samples=2)
+    tree_model = TreeModel(tree.build(X_train, y_train))
+
+    # Predict on training and testing data
+    y_train_pred = tree_model.predict(X_train)
+    y_test_pred = tree_model.predict(X_test)
+
+    # Calculate misclassification rates
+    train_misclassification_rate = 1 - accuracy_score(y_train, y_train_pred)
+    test_misclassification_rate = 1 - accuracy_score(y_test, y_test_pred)
+
+    # Calculate standard errors
+    train_misclassification_error = y_train != y_train_pred
+    test_misclassification_error = y_test != y_test_pred
+    train_std_error = np.std(train_misclassification_error) / np.sqrt(len(y_train))
+    test_std_error = np.std(test_misclassification_error) / np.sqrt(len(y_test))
+
+    return (train_misclassification_rate, train_std_error), (test_misclassification_rate, test_std_error)
 
 
 def hw_randomforests(*args, **kwargs):
