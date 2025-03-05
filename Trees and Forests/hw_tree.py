@@ -144,14 +144,17 @@ class RFModel:
         return np.round(predictions.mean(axis=0)).astype(int)
 
     def importance(self, X, y):
-        base_error = np.mean(self.predict(X) != y)
+        """
+           Calculate permutation importance for each feature.
+        """
+        base_accuracy = np.mean(self.predict(X) == y)
         importances = np.zeros(X.shape[1])
 
         for i in range(X.shape[1]):
             X_permuted = X.copy()
-            np.random.shuffle(X_permuted[:, i])
-            permuted_error = np.mean(self.predict(X_permuted) != y)
-            importances[i] = permuted_error - base_error
+            np.random.shuffle(X_permuted[:, i]) # permute/shuffle the i-th column
+            shuffled_accuracy = np.mean(self.predict(X_permuted) == y)
+            importances[i] = base_accuracy - shuffled_accuracy
 
         return importances
 
