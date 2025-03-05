@@ -44,7 +44,7 @@ class Tree:
         best_gini = float('inf')
         best_feature, best_threshold = None, None
 
-        for feature in self.get_candidate_columns(X):
+        for feature in self.get_candidate_columns(X, self.rand):
             sorted_indices = np.argsort(X[:, feature])  # Sort feature values once to save redundant comparisons
             X_sorted, y_sorted = X[sorted_indices, feature], y[sorted_indices]
 
@@ -67,7 +67,11 @@ class Tree:
         return best_feature, best_threshold
     # best built time: 0.71s (optimized from 6.85s)
 
-    def build(self, X, y, depth=0):
+    def build(self, X, y):
+        self.root = self._build_tree(X, y)
+        return TreeModel(self.root)
+
+    def _build_tree(self, X, y, depth=0):
         if len(np.unique(y)) == 1 or len(y) < self.min_samples:
             return {'prediction': np.argmax(np.bincount(y))}
 
@@ -78,8 +82,8 @@ class Tree:
         left_indices = X[:, feature] <= threshold
         right_indices = X[:, feature] > threshold
 
-        left_subtree = self.build(X[left_indices], y[left_indices], depth + 1)
-        right_subtree = self.build(X[right_indices], y[right_indices], depth + 1)
+        left_subtree = self._build_tree(X[left_indices], y[left_indices], depth + 1)
+        right_subtree = self._build_tree(X[right_indices], y[right_indices], depth + 1)
 
         return {
             'feature': feature,
@@ -174,7 +178,7 @@ def hw_tree_full(train, test):
 
     # Build the tree with min_samples=2
     tree = Tree(rand=random.Random(), min_samples=2)
-    tree_model = TreeModel(tree.build(X_train, y_train))
+    tree_model = tree.build(X_train, y_train)
 
     end_time = time.time()
     build_time = end_time - start_time
