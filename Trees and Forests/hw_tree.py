@@ -72,8 +72,12 @@ class Tree:
         return TreeModel(self.root)
 
     def _build_tree(self, X, y, depth=0):
-        if len(np.unique(y)) == 1 or len(y) < self.min_samples:
-            return {'prediction': np.argmax(np.bincount(y))}
+        if len(y) == 0:
+            print(f"Empty y at depth {depth}!")
+            return {'prediction': None}
+        if len(set(y)) == 1 or len(y) < self.min_samples:
+            print(f"All labels the same at depth {depth}, returning class: {y[0]}")
+            return {'prediction': y[0]}
 
         feature, threshold = self.best_split(X, y)
         if feature is None:
@@ -132,29 +136,45 @@ class RandomForest:
             X_sample, y_sample = X[bootstrap_indices], y[bootstrap_indices]
             tree = Tree(rand=self.rand, get_candidate_columns=random_sqrt_columns, min_samples=2)
             self.trees.append(tree.build(X_sample, y_sample))
-        return RFModel(self.trees)
+        return RFModel(self.trees, X, y)
 
 
 class RFModel:
-    def __init__(self, trees):
+    def __init__(self, trees, X_train, y_train):
         self.trees = trees
+        self.X_train = X_train
+        self.y_train = y_train
 
     def predict(self, X):
+        # Collect predictions for each tree
         predictions = np.array([tree.predict(X) for tree in self.trees])
+
+        # Check if predictions are valid (i.e., no None values)
+        if predictions.size == 0 or np.any(predictions == None):
+            print("Warning: Some predictions are None, returning default prediction (0).")
+            return np.zeros(X.shape[0], dtype=int)
+
         return np.round(predictions.mean(axis=0)).astype(int)
 
-    def importance(self, X, y):
+    def importance(self):
         """
-           Calculate permutation importance for each feature.
+        Calculate permutation importance for each feature using stored training data.
         """
-        base_accuracy = np.mean(self.predict(X) == y)
-        importances = np.zeros(X.shape[1])
+        start_time = time.time()
 
-        for i in range(X.shape[1]):
-            X_permuted = X.copy()
-            np.random.shuffle(X_permuted[:, i]) # permute/shuffle the i-th column
-            shuffled_accuracy = np.mean(self.predict(X_permuted) == y)
+        base_accuracy = np.mean(self.predict(self.X_train) == self.y_train)
+        importances = np.zeros(self.X_train.shape[1])
+
+        for i in range(self.X_train.shape[1]):
+            X_permuted = self.X_train.copy()
+            np.random.shuffle(X_permuted[:, i])  # Permute/shuffle the i-th column
+            shuffled_accuracy = np.mean(self.predict(X_permuted) == self.y_train)
             importances[i] = base_accuracy - shuffled_accuracy
+
+        end_time = time.time()
+        execution_time = end_time - start_time
+
+        print(f"Permutation importance calculation took {execution_time:.4f} seconds.")
 
         return importances
 
