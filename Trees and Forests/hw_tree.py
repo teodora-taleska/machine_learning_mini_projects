@@ -122,29 +122,38 @@ class RandomForest:
 
     def __init__(self, rand=None, n=50):
         self.n = n
-        self.rand = rand
-        self.rftree = Tree(...)  # initialize the tree properly
+        self.rand = rand if rand is not None else random.Random()
+        self.trees = []
 
     def build(self, X, y):
-        # ...
-        return RFModel(...)  # return an object that can do prediction
+        self.trees = []
+        for _ in range(self.n):
+            bootstrap_indices = self.rand.choices(range(len(y)), k=len(y))
+            X_sample, y_sample = X[bootstrap_indices], y[bootstrap_indices]
+            tree = Tree(rand=self.rand, get_candidate_columns=random_sqrt_columns, min_samples=2)
+            self.trees.append(tree.build(X_sample, y_sample))
+        return RFModel(self.trees)
 
 
 class RFModel:
-
-    def __init__(self, *args, **kwargs):
-        # ...
-        pass
+    def __init__(self, trees):
+        self.trees = trees
 
     def predict(self, X):
-        # ...
-        predictions = np.ones(len(X))  # dummy output
-        return predictions
+        predictions = np.array([tree.predict(X) for tree in self.trees])
+        return np.round(predictions.mean(axis=0)).astype(int)
 
-    def importance(self):
-        imps = np.zeros(self.X.shape[1])
-        # ...
-        return imps
+    def importance(self, X, y):
+        base_error = np.mean(self.predict(X) != y)
+        importances = np.zeros(X.shape[1])
+
+        for i in range(X.shape[1]):
+            X_permuted = X.copy()
+            np.random.shuffle(X_permuted[:, i])
+            permuted_error = np.mean(self.predict(X_permuted) != y)
+            importances[i] = permuted_error - base_error
+
+        return importances
 
 
 def read_tab(fn, adict):
@@ -165,46 +174,49 @@ def tki():
     return (Xt, yt), (Xv, yv), legend
 
 
+def compute_misclassification(y_true, y_pred):
+    misclassification_rate = 1 - accuracy_score(y_true, y_pred)
+    std_error = np.std(y_true != y_pred) / np.sqrt(len(y_true))
+    return misclassification_rate, std_error
+
+
 def hw_tree_full(train, test):
     """
-    In function hw_tree_full, build a tree with min_samples=2.
-    Return misclassification rates and standard errors when using training and
-    testing data as test sets.
+    Build a decision tree with min_samples=2 and compute misclassification rates and standard errors.
     """
     X_train, y_train = train
     X_test, y_test = test
 
     start_time = time.time()
-
     tree = Tree(rand=random.Random(), min_samples=2)
     tree_model = tree.build(X_train, y_train)
-
-    end_time = time.time()
-    build_time = end_time - start_time
-
+    build_time = time.time() - start_time
     print(f"Tree built in {build_time:.2f} seconds")
 
-    y_train_pred = tree_model.predict(X_train)
-    y_test_pred = tree_model.predict(X_test)
+    train_results = compute_misclassification(y_train, tree_model.predict(X_train))
+    test_results = compute_misclassification(y_test, tree_model.predict(X_test))
 
-    train_misclassification_rate = 1 - accuracy_score(y_train, y_train_pred)
-    test_misclassification_rate = 1 - accuracy_score(y_test, y_test_pred)
-
-    train_misclassification_error = y_train != y_train_pred
-    test_misclassification_error = y_test != y_test_pred
-    train_std_error = np.std(train_misclassification_error) / np.sqrt(len(y_train))
-    test_std_error = np.std(test_misclassification_error) / np.sqrt(len(y_test))
-
-    return (train_misclassification_rate, train_std_error), (test_misclassification_rate, test_std_error)
+    return train_results, test_results
 
 
-def hw_randomforests(*args, **kwargs):
+def hw_randomforests(train, test):
     """
-    In function hw_randomforest, use random forests with n=100 trees with min_samples=2.
-    Return misclassification rates and standard errors when using training and
-    testing data as test sets.
+    Build a random forest with 100 trees and min_samples=2, and compute misclassification rates and standard errors.
     """
-    pass
+    X_train, y_train = train
+    X_test, y_test = test
+
+    start_time = time.time()
+    rf = RandomForest(n=100)
+    model = rf.build(X_train, y_train)
+    build_time = time.time() - start_time
+    print(f"RF built in {build_time:.2f} seconds")
+
+    train_results = compute_misclassification(y_train, model.predict(X_train))
+    test_results = compute_misclassification(y_test, model.predict(X_test))
+
+    return train_results, test_results
+
 
 if __name__ == "__main__":
     learn, test, legend = tki()
