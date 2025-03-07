@@ -327,6 +327,48 @@ def plot_variable_importance(X, y, feature_names):
     plt.show()
 
 
+def plot_misclassification_vs_trees(train, test, tree_counts=None):
+    """
+    Plots misclassification rates against the number of trees in the Random Forest.
+    """
+    if tree_counts is None:
+        tree_counts = [1, 5, 10, 20, 50, 100, 150]
+    train_errors = []
+    test_errors = []
+    test_std_errors = []
+
+    for n in tree_counts:
+        rf = RandomForest(n=n)
+        model = rf.build(train[0], train[1])
+
+        train_mis, _ = compute_misclassification(train[1], model.predict(train[0]))
+        test_mis, test_std = compute_misclassification(test[1], model.predict(test[0]))
+
+        train_errors.append(train_mis)
+        test_errors.append(test_mis)
+        test_std_errors.append(test_std)
+
+    print(f"Train Errors: {train_errors}")
+    print(f"Test Errors: {test_errors}")
+    print(f"Test Std Errors: {test_std_errors}")
+
+    plt.figure(figsize=(8, 5))
+    plt.plot(tree_counts, test_errors, marker='o', linestyle='-', color='b', label="Test Misclassification")
+    plt.fill_between(tree_counts,
+                     np.array(test_errors) - np.array(test_std_errors),
+                     np.array(test_errors) + np.array(test_std_errors),
+                     color='b', alpha=0.2, label="Test Error ± Std Err")
+
+    plt.xlabel("Number of Trees")
+    plt.ylabel("Misclassification Rate")
+    plt.title("Misclassification Rate vs. Number of Trees")
+    plt.legend()
+
+    save_path = "visualizations/misclassification_vs_trees.png"
+    plt.savefig(save_path)
+    plt.show()
+
+    print(f"Plot saved to {save_path}")
 
 
 if __name__ == "__main__":
@@ -335,7 +377,8 @@ if __name__ == "__main__":
     print("full", hw_tree_full(learn, test))
     print("random forests", hw_randomforests(learn, test))
 
-    print('variable importance', plot_variable_importance(learn[0], learn[1], legend))
+    # print('variable importance', plot_variable_importance(learn[0], learn[1], legend))
+    # print('misclassification vs trees', plot_misclassification_vs_trees(learn, test))
 
 
 
