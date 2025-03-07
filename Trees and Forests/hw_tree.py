@@ -3,10 +3,14 @@ import numpy as np
 import random
 from sklearn.metrics import accuracy_score
 import time
+import matplotlib.pyplot as plt
 
 
 def all_columns(X, rand=None):
-    return range(X.shape[1])
+    columns = list(range(X.shape[1]))
+    if rand is not None:
+        np.random.shuffle(columns)
+    return columns
 
 
 def random_sqrt_columns(X, rand):
@@ -237,6 +241,17 @@ def hw_randomforests(train, test):
 
     train_results = compute_misclassification(y_train, model.predict(X_train))
     test_results = compute_misclassification(y_test, model.predict(X_test))
+
+    importances = model.importance()
+
+    plt.figure(figsize=(10, 6))
+    indices = np.arange(X_train.shape[1])
+    plt.bar(indices, importances, width=0.4, label='Feature Importance')
+    plt.xlabel('Feature Index')
+    plt.ylabel('Importance')
+    plt.title('Feature Importance in Random Forest')
+    plt.legend()
+    plt.show()
 
     return train_results, test_results
 
