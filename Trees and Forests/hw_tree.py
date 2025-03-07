@@ -15,7 +15,9 @@ def all_columns(X, rand=None):
 
 def random_sqrt_columns(X, rand):
     num_features = int(np.sqrt(X.shape[1]))
-    return rand.sample(range(X.shape[1]), num_features)
+    selected_columns = rand.sample(range(X.shape[1]), num_features)
+    rand.shuffle(selected_columns)  
+    return selected_columns
 
 
 class Tree:
