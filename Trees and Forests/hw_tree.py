@@ -16,7 +16,7 @@ def all_columns(X, rand=None):
 def random_sqrt_columns(X, rand):
     num_features = int(np.sqrt(X.shape[1]))
     selected_columns = rand.sample(range(X.shape[1]), num_features)
-    rand.shuffle(selected_columns)  
+    rand.shuffle(selected_columns)
     return selected_columns
 
 
@@ -82,8 +82,7 @@ class Tree:
             print(f"Empty y at depth {depth}!")
             return {'prediction': None}
         if len(set(y)) == 1 or len(y) < self.min_samples:
-            print(f"All labels the same at depth {depth}, returning class: {y[0]}")
-            return {'prediction': y[0]}
+            return {'prediction': np.argmax(np.bincount(y))}
 
         feature, threshold = self.best_split(X, y)
         if feature is None:
@@ -134,48 +133,55 @@ class RandomForest:
         self.n = n
         self.rand = rand if rand is not None else random.Random()
         self.trees = []
+        self.oob_indices = []
 
     def build(self, X, y):
         self.trees = []
+        self.oob_indices = []
         for _ in range(self.n):
             bootstrap_indices = self.rand.choices(range(len(y)), k=len(y))
+            oob_indices = list(set(range(len(y))) - set(bootstrap_indices))
+            self.oob_indices.append(oob_indices)
             X_sample, y_sample = X[bootstrap_indices], y[bootstrap_indices]
             tree = Tree(rand=self.rand, get_candidate_columns=random_sqrt_columns, min_samples=2)
             self.trees.append(tree.build(X_sample, y_sample))
-        return RFModel(self.trees, X, y)
+        print(f"Random forest built with {self.n} trees.")
+        return RFModel(self.trees, X, y, self.oob_indices)
 
 
 class RFModel:
-    def __init__(self, trees, X_train, y_train):
+    def __init__(self, trees, X_train, y_train, oob_indices):
         self.trees = trees
         self.X_train = X_train
         self.y_train = y_train
+        self.oob_indices = oob_indices
 
     def predict(self, X):
-        # Collect predictions for each tree
         predictions = np.array([tree.predict(X) for tree in self.trees])
-
-        # Check if predictions are valid (i.e., no None values)
-        if predictions.size == 0 or np.any(predictions == None):
-            print("Warning: Some predictions are None, returning default prediction (0).")
-            return np.zeros(X.shape[0], dtype=int)
-
         return np.round(predictions.mean(axis=0)).astype(int)
 
     def importance(self):
         """
-        Calculate permutation importance for each feature using stored training data.
+        Calculate permutation importance for each feature using OOB samples.
         """
         start_time = time.time()
-
-        base_accuracy = np.mean(self.predict(self.X_train) == self.y_train)
         importances = np.zeros(self.X_train.shape[1])
 
         for i in range(self.X_train.shape[1]):
-            X_permuted = self.X_train.copy()
-            np.random.shuffle(X_permuted[:, i])  # Permute/shuffle the i-th column
-            shuffled_accuracy = np.mean(self.predict(X_permuted) == self.y_train)
-            importances[i] = base_accuracy - shuffled_accuracy
+            for tree, oob_idx in zip(self.trees, self.oob_indices):
+                if len(oob_idx) == 0:
+                    continue
+                X_oob = self.X_train[oob_idx]
+                y_oob = self.y_train[oob_idx]
+                base_accuracy = accuracy_score(y_oob, tree.predict(X_oob))
+
+                X_permuted = X_oob.copy()
+                np.random.shuffle(X_permuted[:, i])
+                shuffled_accuracy = accuracy_score(y_oob, tree.predict(X_permuted))
+
+                importances[i] += base_accuracy - shuffled_accuracy
+
+            importances[i] /= len(self.trees)
 
         end_time = time.time()
         execution_time = end_time - start_time
