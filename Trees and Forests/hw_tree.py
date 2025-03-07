@@ -39,6 +39,7 @@ class Tree:
         self.get_candidate_columns = get_candidate_columns  # needed for random forests
         self.min_samples = min_samples
         self.root = None
+        self.features_used = set()
 
     def gini_impurity(self, y):
         classes, counts = np.unique(y, return_counts=True)
@@ -51,6 +52,7 @@ class Tree:
         best_feature, best_threshold = None, None
 
         for feature in self.get_candidate_columns(X, self.rand):
+            self.features_used.add(feature)
             sorted_indices = np.argsort(X[:, feature])  # Sort feature values once to save redundant comparisons
             X_sorted, y_sorted = X[sorted_indices, feature], y[sorted_indices]
 
@@ -75,7 +77,7 @@ class Tree:
 
     def build(self, X, y):
         self.root = self._build_tree(X, y)
-        return TreeModel(self.root)
+        return TreeModel(self.root, self.features_used)
 
     def _build_tree(self, X, y, depth=0):
         if len(y) == 0:
@@ -102,8 +104,9 @@ class Tree:
         }
 
 class TreeModel:
-    def __init__(self, root):
+    def __init__(self, root, features_used):
         self.root = root
+        self.features_used = features_used
 
     def predict(self, X):
         return np.array([self._predict_single(x, self.root) for x in X])
@@ -134,10 +137,12 @@ class RandomForest:
         self.rand = rand if rand is not None else random.Random()
         self.trees = []
         self.oob_indices = []
+        self.features_used = []
 
     def build(self, X, y):
         self.trees = []
         self.oob_indices = []
+        self.features_used = []
         for _ in range(self.n):
             bootstrap_indices = self.rand.choices(range(len(y)), k=len(y))
             oob_indices = list(set(range(len(y))) - set(bootstrap_indices))
@@ -145,16 +150,18 @@ class RandomForest:
             X_sample, y_sample = X[bootstrap_indices], y[bootstrap_indices]
             tree = Tree(rand=self.rand, get_candidate_columns=random_sqrt_columns, min_samples=2)
             self.trees.append(tree.build(X_sample, y_sample))
+            self.features_used.append(tree.features_used)
         print(f"Random forest built with {self.n} trees.")
-        return RFModel(self.trees, X, y, self.oob_indices)
+        return RFModel(self.trees, X, y, self.oob_indices, self.features_used)
 
 
 class RFModel:
-    def __init__(self, trees, X_train, y_train, oob_indices):
+    def __init__(self, trees, X_train, y_train, oob_indices, features_used=None):
         self.trees = trees
         self.X_train = X_train
         self.y_train = y_train
         self.oob_indices = oob_indices
+        self.features_used = features_used
 
     def predict(self, X):
         predictions = np.array([tree.predict(X) for tree in self.trees])
@@ -168,8 +175,8 @@ class RFModel:
         importances = np.zeros(self.X_train.shape[1])
 
         for i in range(self.X_train.shape[1]):
-            for tree, oob_idx in zip(self.trees, self.oob_indices):
-                if len(oob_idx) == 0:
+            for tree, oob_idx, features in zip(self.trees, self.oob_indices, self.features_used):
+                if len(oob_idx) == 0 or i not in features:
                     continue
                 X_oob = self.X_train[oob_idx]
                 y_oob = self.y_train[oob_idx]
