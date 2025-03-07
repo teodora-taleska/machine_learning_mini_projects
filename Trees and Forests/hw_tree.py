@@ -4,6 +4,7 @@ import random
 from sklearn.metrics import accuracy_score
 import time
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
 
 
 def all_columns(X, rand=None):
@@ -172,28 +173,40 @@ class RFModel:
         Calculate permutation importance for each feature using OOB samples.
         """
         start_time = time.time()
-        importances = np.zeros(self.X_train.shape[1])
+        n_features = self.X_train.shape[1]
+        importances = np.zeros(n_features)
 
-        for i in range(self.X_train.shape[1]):
-            for tree, oob_idx, features in zip(self.trees, self.oob_indices, self.features_used):
-                if len(oob_idx) == 0 or i not in features:
-                    continue
+        # Precompute base accuracies for each tree using its OOB samples
+        base_accuracies = []
+        for tree, oob_idx in zip(self.trees, self.oob_indices):
+            if len(oob_idx) == 0:
+                base_accuracies.append(None)
+            else:
                 X_oob = self.X_train[oob_idx]
                 y_oob = self.y_train[oob_idx]
-                base_accuracy = accuracy_score(y_oob, tree.predict(X_oob))
+                base_accuracies.append(accuracy_score(y_oob, tree.predict(X_oob)))
 
-                X_permuted = X_oob.copy()
-                np.random.shuffle(X_permuted[:, i])
-                shuffled_accuracy = accuracy_score(y_oob, tree.predict(X_permuted))
+        # Compute permutation importance
+        for i in range(n_features):
+            feature_importance = 0
 
-                importances[i] += base_accuracy - shuffled_accuracy
+            for tree, oob_idx, features, base_acc in zip(self.trees, self.oob_indices, self.features_used,
+                                                         base_accuracies):
+                if len(oob_idx) == 0 or i not in features or base_acc is None:
+                    continue
 
-            importances[i] /= len(self.trees)
+                X_oob = self.X_train[oob_idx].copy()
+                y_oob = self.y_train[oob_idx]
 
-        end_time = time.time()
-        execution_time = end_time - start_time
+                np.random.shuffle(X_oob[:, i])  # Permute feature i
+                shuffled_accuracy = accuracy_score(y_oob, tree.predict(X_oob))
 
-        print(f"Permutation importance calculation took {execution_time:.4f} seconds.")
+                feature_importance += base_acc - shuffled_accuracy
+
+            importances[i] = feature_importance
+
+        execution_time = time.time() - start_time
+        print(f"Optimized permutation importance calculation took {execution_time:.4f} seconds.")
 
         return importances
 
@@ -257,18 +270,63 @@ def hw_randomforests(train, test):
     train_results = compute_misclassification(y_train, model.predict(X_train))
     test_results = compute_misclassification(y_test, model.predict(X_test))
 
-    importances = model.importance()
-
-    plt.figure(figsize=(10, 6))
-    indices = np.arange(X_train.shape[1])
-    plt.bar(indices, importances, width=0.4, label='Feature Importance')
-    plt.xlabel('Feature Index')
-    plt.ylabel('Importance')
-    plt.title('Feature Importance in Random Forest')
-    plt.legend()
-    plt.show()
+    # importances = model.importance()
+    #
+    # plt.figure(figsize=(10, 6))
+    # indices = np.arange(X_train.shape[1])
+    # plt.bar(indices, importances, width=0.4, label='Feature Importance')
+    # plt.xlabel('Feature Index')
+    # plt.ylabel('Importance')
+    # plt.title('Feature Importance in Random Forest')
+    # plt.legend()
+    # plt.show()
 
     return train_results, test_results
+
+
+
+def plot_variable_importance(X, y, feature_names):
+
+    # Train the Random Forest Model
+    rf = RandomForest(n=100)
+    model = rf.build(X, y)
+    importances = model.importance()
+
+    # Train 100 Non-Random Trees and Collect Root Features
+    root_features = np.zeros(X.shape[1])
+    for i in range(100):
+        print('tree', i)
+        rand_indices = np.random.permutation(len(y))
+        X_shuffled, y_shuffled = X[rand_indices], y[rand_indices]
+        tree = Tree()
+        tree_model = tree.build(X_shuffled, y_shuffled)
+        if tree_model.root and 'feature' in tree_model.root:
+            root_features[tree_model.root['feature']] += 1
+
+    # Normalize Root Feature Counts
+    root_features /= 100  # Convert to frequency
+
+    plt.figure(figsize=(12, 6))
+    indices = np.arange(X.shape[1])
+
+    plt.bar(indices - 0.2, importances, width=0.4, label='Random Forest Importance')
+    plt.bar(indices + 0.2, root_features, width=0.4, label='Root Features (100 Trees)')
+
+    plt.xlabel('Feature Index')
+    plt.ylabel('Importance / Frequency')
+    plt.title('Feature Importance in Random Forest & Root Features in Trees')
+
+    plt.xticks(indices, feature_names, rotation=45, ha='right')
+    plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True, prune='both'))
+
+    plt.legend()
+    plt.tight_layout()
+
+    plt.savefig('visualizations/variable_importance.png')
+
+    plt.show()
+
+
 
 
 if __name__ == "__main__":
@@ -276,6 +334,8 @@ if __name__ == "__main__":
 
     print("full", hw_tree_full(learn, test))
     print("random forests", hw_randomforests(learn, test))
+
+    print('variable importance', plot_variable_importance(learn[0], learn[1], legend))
 
 
 
