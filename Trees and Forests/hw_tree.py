@@ -55,7 +55,6 @@ class Tree:
         best_feature, best_threshold = None, None
 
         for feature in self.get_candidate_columns(X, self.rand):
-            self.features_used.add(feature)
             sorted_indices = np.argsort(X[:, feature])  # Sort feature values once to save redundant comparisons
             X_sorted, y_sorted = X[sorted_indices, feature], y[sorted_indices]
 
@@ -79,6 +78,7 @@ class Tree:
     # best built time: 0.71s (optimized from 6.85s)
 
     def build(self, X, y):
+        self.features_used.clear()  # Reset for new tree
         self.root = self._build_tree(X, y)
         return TreeModel(self.root, self.features_used)
 
@@ -92,6 +92,8 @@ class Tree:
         feature, threshold = self.best_split(X, y)
         if feature is None:
             return {'prediction': np.argmax(np.bincount(y))}
+
+        self.features_used.add(feature) # adding only features considered for split
 
         left_indices = X[:, feature] <= threshold
         right_indices = X[:, feature] > threshold
@@ -179,16 +181,14 @@ class RFModel:
         importances = np.zeros(n_features)
 
         # Precompute base accuracies for each tree using its OOB samples
-        base_accuracies = []
-        for tree, oob_idx in zip(self.trees, self.oob_indices):
-            if len(oob_idx) == 0:
-                base_accuracies.append(None)
-            else:
-                X_oob = self.X_train[oob_idx]
-                y_oob = self.y_train[oob_idx]
-                base_accuracies.append(accuracy_score(y_oob, tree.predict(X_oob)))
+        base_accuracies = np.array([
+            accuracy_score(self.y_train[oob_idx], tree.predict(self.X_train[oob_idx]))
+            if len(oob_idx) > 0 else None
+            for tree, oob_idx in zip(self.trees, self.oob_indices)
+        ])
 
-        # Compute permutation importance
+        print(self.features_used[0:5])
+
         for i in range(n_features):
             feature_importance = 0
 
@@ -216,41 +216,45 @@ class RFModel:
         return importances
 
     def importance3(self):
-        """Efficiently calculate permutation importance for combinations of 3 features."""
+        """Efficiently calculate permutation importance for combinations of 3 features using only features present in each tree."""
         start_time = time.time()
-        n_features = self.X_train.shape[1]
-        all_feature_combinations = list(combinations(range(n_features), 3))
-        importance3_scores = {combo: 0 for combo in all_feature_combinations}
+        importance3_scores = {}
 
-        # Compute base accuracies once
-        base_accuracies = []
-        for tree, oob_idx in zip(self.trees, self.oob_indices):
-            if len(oob_idx) == 0:
-                base_accuracies.append(None)
-            else:
-                X_oob, y_oob = self.X_train[oob_idx], self.y_train[oob_idx]
-                base_accuracies.append(accuracy_score(y_oob, tree.predict(X_oob)))
+        base_accuracies = np.array([
+            accuracy_score(self.y_train[oob_idx], tree.predict(self.X_train[oob_idx]))
+            if len(oob_idx) > 0 else None
+            for tree, oob_idx in zip(self.trees, self.oob_indices)
+        ])
 
-        total_iterations = sum(
-            len([combo for combo in all_feature_combinations if set(combo).issubset(features)])
-            for features in self.features_used
-        )
+        valid_trees = [
+            (tree, oob_idx, features, base_acc)
+            for tree, oob_idx, features, base_acc in
+            zip(self.trees, self.oob_indices, self.features_used, base_accuracies)
+            if len(oob_idx) > 0 and base_acc is not None and len(features) >= 3
+        ]
 
+        # For progress tracking
+        total_iterations = sum(len(list(combinations(features, 3))) for _, _, features, _ in valid_trees)
         progress = tqdm(total=total_iterations, desc="Calculating Feature Importance")
 
-        for tree, oob_idx, features, base_acc in zip(self.trees, self.oob_indices, self.features_used, base_accuracies):
-            if len(oob_idx) == 0 or base_acc is None:
-                continue
+        for tree, oob_idx, features, base_acc in valid_trees:
+            X_oob, y_oob = self.X_train[oob_idx], self.y_train[oob_idx]
+            feature_combos = list(combinations(features, 3))
 
-            X_oob, y_oob = self.X_train[oob_idx].copy(), self.y_train[oob_idx]
-            valid_combos = [combo for combo in all_feature_combinations if set(combo).issubset(features)]
+            # Vectorized shuffling
+            X_oob_shuffled = X_oob.copy()
+            shuffled_accuracies = np.zeros(len(feature_combos))
 
-            for combo in valid_combos:
-                X_oob_shuffled = X_oob.copy()
-                X_oob_shuffled[:, combo] = np.apply_along_axis(np.random.permutation, 0, X_oob[:, combo])
-                shuffled_accuracy = accuracy_score(y_oob, tree.predict(X_oob_shuffled))
-                importance3_scores[combo] += base_acc - shuffled_accuracy
-                progress.update(1)
+            for i, combo in enumerate(feature_combos):
+                X_oob_shuffled[:, combo] = X_oob[:, combo][np.random.permutation(len(X_oob))]
+                shuffled_accuracies[i] = accuracy_score(y_oob, tree.predict(X_oob_shuffled))
+
+            # Store importance scores (vectorized)
+            importance_diffs = base_acc - shuffled_accuracies
+            for combo, imp_diff in zip(feature_combos, importance_diffs):
+                importance3_scores[combo] = importance3_scores.get(combo, 0) + imp_diff
+
+            progress.update(len(feature_combos))
 
         progress.close()
         execution_time = time.time() - start_time
@@ -469,7 +473,7 @@ if __name__ == "__main__":
     # print('variable importance', plot_variable_importance(learn[0], learn[1], legend))
     # print('misclassification vs trees', plot_misclassification_vs_trees(learn, test))
 
-    num_features = 4
+    num_features = 50
     X_train = learn[0][:, :num_features]
     y_train = learn[1]
     X_test = test[0][:, :num_features]
