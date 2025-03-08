@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from itertools import combinations
 from tqdm import tqdm
+from collections import defaultdict
 
 
 def all_columns(X, rand=None):
@@ -263,6 +264,29 @@ class RFModel:
         sorted_importances = sorted(importance3_scores.items(), key=lambda x: x[1], reverse=True)
         return sorted_importances
 
+    def importance3_structure(self):
+        """
+        Identify the best combination of 3 variables by exploring the structure of trees in the forest.
+        """
+        # Dictionary to count occurrences of feature combinations
+        combo_counts = defaultdict(int)
+
+        # Iterate over all trees in the forest
+        for tree_features in self.features_used:
+            # features_list = list(tree_features)[:10]
+            if len(tree_features) < 3:
+                continue
+
+            # Get all combinations of 3 features used in this tree
+            feature_combos = list(combinations(tree_features, 3))
+            for combo in feature_combos:
+                combo_counts[combo] += 1
+
+        best_combo = max(combo_counts, key=combo_counts.get)
+        return best_combo
+
+
+
 
 def train_and_compare(X_train, y_train, X_test, y_test):
     """
@@ -276,15 +300,18 @@ def train_and_compare(X_train, y_train, X_test, y_test):
     print("Computing feature importance...")
     importance = rf_model.importance()
     importance3 = rf_model.importance3()
+    importance3_structure = rf_model.importance3_structure()
 
     top3_importance = np.argsort(importance)[-3:]
     a, b, c = importance3[0][0]
     top1_importance3 = [a, b, c]
+    top1_importance3_structure = list(importance3_structure)
 
     print("Top 3 features (single importance):", top3_importance)
     print("Top feature combination (importance3):", top1_importance3)
+    print("Top feature combination (importance3_structure):", top1_importance3_structure)
 
-    combs = [top3_importance, top1_importance3]
+    combs = [top3_importance, top1_importance3, top1_importance3_structure]
     results = {}
 
     for c in combs:
@@ -464,6 +491,9 @@ def plot_misclassification_vs_trees(train, test, tree_counts=None):
     print(f"Plot saved to {save_path}")
 
 
+
+
+
 if __name__ == "__main__":
     learn, test, legend = tki()
 
@@ -473,15 +503,17 @@ if __name__ == "__main__":
     # print('variable importance', plot_variable_importance(learn[0], learn[1], legend))
     # print('misclassification vs trees', plot_misclassification_vs_trees(learn, test))
 
-    num_features = 50
-    X_train = learn[0][:, :num_features]
-    y_train = learn[1]
-    X_test = test[0][:, :num_features]
-    y_test = test[1]
+    # num_features = 30
+    # X_train = learn[0][:, :num_features]
+    # y_train = learn[1]
+    # X_test = test[0][:, :num_features]
+    # y_test = test[1]
 
-    print("Selected Features:", legend[:num_features])
+    X_train, y_train = learn
+    X_test, y_test = test
+
+    # print("Selected Features:", legend[:num_features])
 
     print('train and compare', train_and_compare(X_train, y_train, X_test, y_test))
-
 
 
