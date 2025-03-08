@@ -5,6 +5,8 @@ from sklearn.metrics import accuracy_score
 import time
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
+from itertools import combinations
+from tqdm import tqdm
 
 
 def all_columns(X, rand=None):
@@ -199,16 +201,103 @@ class RFModel:
                 y_oob = self.y_train[oob_idx]
 
                 np.random.shuffle(X_oob[:, i])  # Permute feature i
-                shuffled_accuracy = accuracy_score(y_oob, tree.predict(X_oob))
+                y_pred = tree.predict(X_oob)
+                if None in y_pred or None in y_oob:
+                    continue
+                shuffled_accuracy = accuracy_score(y_oob, y_pred)
 
                 feature_importance += base_acc - shuffled_accuracy
 
             importances[i] = feature_importance
 
         execution_time = time.time() - start_time
-        print(f"Optimized permutation importance calculation took {execution_time:.4f} seconds.")
+        print(f"✅ permutation importance calculation took {execution_time:.4f} seconds.")
 
         return importances
+
+    def importance3(self):
+        """Efficiently calculate permutation importance for combinations of 3 features."""
+        start_time = time.time()
+        n_features = self.X_train.shape[1]
+        all_feature_combinations = list(combinations(range(n_features), 3))
+        importance3_scores = {combo: 0 for combo in all_feature_combinations}
+
+        # Compute base accuracies once
+        base_accuracies = []
+        for tree, oob_idx in zip(self.trees, self.oob_indices):
+            if len(oob_idx) == 0:
+                base_accuracies.append(None)
+            else:
+                X_oob, y_oob = self.X_train[oob_idx], self.y_train[oob_idx]
+                base_accuracies.append(accuracy_score(y_oob, tree.predict(X_oob)))
+
+        total_iterations = sum(
+            len([combo for combo in all_feature_combinations if set(combo).issubset(features)])
+            for features in self.features_used
+        )
+
+        progress = tqdm(total=total_iterations, desc="Calculating Feature Importance")
+
+        for tree, oob_idx, features, base_acc in zip(self.trees, self.oob_indices, self.features_used, base_accuracies):
+            if len(oob_idx) == 0 or base_acc is None:
+                continue
+
+            X_oob, y_oob = self.X_train[oob_idx].copy(), self.y_train[oob_idx]
+            valid_combos = [combo for combo in all_feature_combinations if set(combo).issubset(features)]
+
+            for combo in valid_combos:
+                X_oob_shuffled = X_oob.copy()
+                X_oob_shuffled[:, combo] = np.apply_along_axis(np.random.permutation, 0, X_oob[:, combo])
+                shuffled_accuracy = accuracy_score(y_oob, tree.predict(X_oob_shuffled))
+                importance3_scores[combo] += base_acc - shuffled_accuracy
+                progress.update(1)
+
+        progress.close()
+        execution_time = time.time() - start_time
+        print(f"✅ 3-way permutation importance calculation took {execution_time:.4f} seconds.")
+
+        sorted_importances = sorted(importance3_scores.items(), key=lambda x: x[1], reverse=True)
+        return sorted_importances
+
+
+def train_and_compare(X_train, y_train, X_test, y_test):
+    """
+    Train a RandomForest with 1000 trees, extract feature importance,
+    and compare the performance of single Tree models with the top features.
+    """
+    print("Training RandomForest...")
+    rand_forest = RandomForest(n=1000)
+    rf_model = rand_forest.build(X_train, y_train)
+
+    print("Computing feature importance...")
+    importance = rf_model.importance()
+    importance3 = rf_model.importance3()
+
+    top3_importance = np.argsort(importance)[-3:]
+    a, b, c = importance3[0][0]
+    top1_importance3 = [a, b, c]
+
+    print("Top 3 features (single importance):", top3_importance)
+    print("Top feature combination (importance3):", top1_importance3)
+
+    combs = [top3_importance, top1_importance3]
+    results = {}
+
+    for c in combs:
+        print(f"Training Tree with features {c}...")
+        X_train_feature = X_train[:, c]
+        X_test_feature = X_test[:, c]
+
+        tree = Tree()
+        tree_model = tree.build(X_train_feature, y_train)
+
+        y_pred = tree_model.predict(X_test_feature)
+        accuracy = np.mean(y_pred == y_test)
+
+        results[tuple(c)] = accuracy
+        print(f"Accuracy with feature {c}: {accuracy:.4f}")
+
+    return results
 
 
 def read_tab(fn, adict):
@@ -374,11 +463,21 @@ def plot_misclassification_vs_trees(train, test, tree_counts=None):
 if __name__ == "__main__":
     learn, test, legend = tki()
 
-    print("full", hw_tree_full(learn, test))
-    print("random forests", hw_randomforests(learn, test))
+    # print("full", hw_tree_full(learn, test))
+    # print("random forests", hw_randomforests(learn, test))
 
     # print('variable importance', plot_variable_importance(learn[0], learn[1], legend))
     # print('misclassification vs trees', plot_misclassification_vs_trees(learn, test))
+
+    num_features = 4
+    X_train = learn[0][:, :num_features]
+    y_train = learn[1]
+    X_test = test[0][:, :num_features]
+    y_test = test[1]
+
+    print("Selected Features:", legend[:num_features])
+
+    print('train and compare', train_and_compare(X_train, y_train, X_test, y_test))
 
 
 
