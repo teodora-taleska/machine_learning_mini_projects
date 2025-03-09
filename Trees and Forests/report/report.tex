@@ -201,7 +201,7 @@ Key observations include: the misclassification rate decreases initially, reachi
 \subsubsection*{Permutation-Based Feature Importance}
 
 
-We measured variable importance in random forests using out-of-bag (OOB) samples. For each tree, OOB samples (data not used in training) are passed through the tree to record prediction accuracy. To assess a variable's importance, its values in the OOB samples are permuted, and the accuracy is recalculated. The average decrease in accuracy across all trees, caused by this permutation, serves as the variable's importance measure. This approach simulates removing the variable's contribution, offering a reliable estimate of its predictive strength\cite{ESL}.
+We measured variable importance in random forests using out-of-bag (OOB) samples. For each tree, OOB samples (data not used in training) are passed through the tree to record prediction accuracy. To assess a variable's importance, its values in the OOB samples are permuted, and the accuracy is recalculated. The decrease in accuracy across all trees, caused by this permutation, serves as the variable's importance measure. This approach simulates removing the variable's contribution, offering a reliable estimate of its predictive strength\cite{ESL}.
 
 \subsection*{Results}
 
