@@ -39,7 +39,8 @@
 
 % Article title
 \PaperTitle{
-Implementation and Evaluation of Classification Trees and Random Forests for Binary Classification
+%Implementation and Evaluation of Classification Trees and Random Forests for Binary Classification
+Binary Classification with Trees and Random Forests
 }
 
 % Authors (student competitors) and their info
@@ -81,14 +82,14 @@ Implementation and Evaluation of Classification Trees and Random Forests for Bin
 \section*{Introduction}
 
 This project aims to build and test classification trees and random forests from scratch using the TKI resistance FTIR spectral dataset. The dataset includes spectral measurements at various wavelengths for different cell lines, with a binary target for classification.
-
-The project consists of three main parts:
-
-\begin{enumerate}
-\item Building and testing classification trees and random forests – Creating the models, calculating error rates, and measuring uncertainty.
-\item Analyzing feature importance – Using permutation methods to find the most important spectral variables.
-\item Exploring feature interactions – Studying tree structures to identify the top three-variable combinations.
-\end{enumerate}
+%
+%The project consists of three main parts:
+%
+%\begin{enumerate}
+%\item Building and testing classification trees and random forests – Creating the models, calculating error rates, and measuring uncertainty.
+%\item Analyzing feature importance – Using permutation methods to find the most important spectral variables.
+%\item Exploring feature interactions – Studying tree structures to identify the top three-variable combinations.
+%\end{enumerate}
 
 
 %------------------------------------------------
@@ -99,17 +100,24 @@ The project consists of three main parts:
 
 \subsubsection*{Classification Trees}
 
-In this project, \textbf{classification trees} were built by splitting data to minimize \textbf{Gini impurity}, which measures the chance of misclassifying a random element if labeled based on the subset's class distribution\cite{MLPP}. The Gini impurity is:
+%In this project, \textbf{classification trees} were built by splitting data to minimize \textbf{Gini impurity}, which measures the chance of misclassifying a random element if labeled based on the subset's class distribution\cite{MLPP}. The Gini impurity is:
+%
+%\[
+%\text{Gini}(D) = 1 - \sum_{c=1}^{C} \hat{\pi}_c^2
+%\]
+%where:
+%\begin{itemize}
+%    \item \( D \) is the dataset at a node,
+%    \item \( C \) is the number of classes,
+%    \item \( \hat{\pi}_c \) is the proportion of data points in \( D \) that belong to class \( c \).
+%\end{itemize}
 
-\[
-\text{Gini}(D) = 1 - \sum_{c=1}^{C} \hat{\pi}_c^2
-\]
-where:
-\begin{itemize}
-    \item \( D \) is the dataset at a node,
-    \item \( C \) is the number of classes,
-    \item \( \hat{\pi}_c \) is the proportion of data points in \( D \) that belong to class \( c \).
-\end{itemize}
+In this project, \textbf{classification trees} were built by splitting data to minimize \textbf{Gini impurity}, which measures the chance of misclassifying a random element if labeled based on the subset's class distribution\cite{MLPP}.
+%The Gini impurity for a dataset \( D \) is given by:
+%\[
+%\text{Gini}(D) = 1 - \sum_{c=1}^{C} \hat{\pi}_c^2
+%\]
+%where \( C \) is the number of classes, and \( \hat{\pi}_c \) is the proportion of data points in \( D \) belonging to class \( c \). This formula calculates the probability of incorrect classification, guiding the tree to create purer subsets at each split.
 
 %Additionally, the \textbf{misclassification rate} was used as an error measure to evaluate the quality of the splits. The misclassification rate is defined as\cite{MLPP}:
 %
@@ -125,12 +133,13 @@ where:
 
 \subsubsection*{Random Forests}
 
-We also implemented \textbf{random forests}, an ensemble method that reduces prediction variance by averaging the outputs of multiple decision trees. Each tree is trained on a random subset of the data (using \textbf{bagging})\cite{MLPP}, and the final prediction is:
-
-\[
-f(x) = \frac{1}{M} \sum_{m=1}^{M} f_m(x),
-\]
-where \( f_m(x) \) is the prediction of the \( m \)-th tree, and \( M \) is the total number of trees in the forest.
+We also implemented \textbf{random forests}, an ensemble method that reduces prediction variance by averaging the outputs of multiple decision trees. Each tree is trained on a random subset of the data (using \textbf{bagging})\cite{MLPP}.
+%and the final prediction is:
+%
+%\[
+%f(x) = \frac{1}{M} \sum_{m=1}^{M} f_m(x),
+%\]
+%where \( f_m(x) \) is the prediction of the \( m \)-th tree, and \( M \) is the total number of trees in the forest.
 %
 %To further reduce correlation between trees, random forests introduce randomness in two ways:
 %\begin{itemize}
@@ -144,65 +153,44 @@ where \( f_m(x) \) is the prediction of the \( m \)-th tree, and \( M \) is the 
 \subsubsection*{Quantifying Uncertainty}
 
 
-To quantify the uncertainty of the estimates, we compute both the \textbf{misclassification rate (MR)} and the \textbf{standard error}. The misclassification rate measures the proportion of incorrectly classified samples\cite{MLPP}, while the standard error provides an estimate of the uncertainty associated with this rate.
-
-The misclassification rate is calculated as:
+To quantify uncertainty, we compute the \textbf{misclassification rate (MR)} and its \textbf{standard error}. The MR measures the proportion of incorrectly classified samples\cite{MLPP}, while the standard error estimates the uncertainty of this rate. The MR is calculated as:
 
 \[
 \text{MR} = 1 - \frac{1}{N} \sum_{i=1}^{N} \mathbb{I}(y_i = \hat{y}_i),
 \]
-where:
-\begin{itemize}
-    \item \( y_i \) is the true label for the \( i \)-th sample,
-    \item \( \hat{y}_i \) is the predicted label for the \( i \)-th sample,
-    \item \( N \) is the total number of samples,
-    \item \( \mathbb{I}(\cdot) \) is the indicator function, which equals 1 if the condition is true and 0 otherwise.
-\end{itemize}
 
-The standard error of the misclassification rate is calculated as:
-
-\[
-\text{Standard Error} = \frac{\sigma}{\sqrt{N}},
-\]
-where:
-\begin{itemize}
-    \item \( \sigma \) is the standard deviation of the misclassification errors (\( y_i \neq \hat{y}_i \)),
-    \item \( N \) is the total number of samples.
-\end{itemize}
-
-
-The misclassification rate provides a point estimate of the model's error, while the standard error measures the uncertainty of this estimate. Together, they allow us to assess not only how well the model performs but also how reliable the performance estimate is. For example, a low misclassification rate with a small standard error indicates both high accuracy and high confidence in the estimate. Conversely, a low misclassification rate with a large standard error suggests that the estimate may not be reliable due to high variability.
-
-
+where \( y_i \) is the true label, \( \hat{y}_i \) is the predicted label, \( N \) is the total number of samples, and \( \mathbb{I}(\cdot) \) is the indicator function. The standard error is given by \(\text{Standard Error} = \frac{\sigma}{\sqrt{N}}\), where \(\sigma\) is the standard deviation of misclassification errors. Together, these metrics assess both model performance and the reliability of the estimate. A low MR with a small standard error indicates high accuracy and confidence, while a low MR with a large standard error suggests variability and less reliability.
 \subsection*{Results}
 
 \subsubsection*{Decision Tree Misclassification Rates}
 
-The decision tree model achieved a \textbf{training misclassification rate of \(0.0 \pm 0.0\)}, indicating perfect performance on the training data. However, on the test set, the misclassification rate increased to \(\mathbf{0.367 \pm 0.062}\). This suggests that the decision tree is overfitting the training data, as it performs well on the training set but poorly on the test set. The relatively high standard error on the test set indicates some variability in the model's performance.
+The decision tree model achieved a perfect \textbf{training misclassification rate of \(0.0 \pm 0.0\)}. However, on the test set, the misclassification rate increased to \(\mathbf{0.367 \pm 0.062}\), suggesting overfitting. The relatively high standard error on the test set indicates some variability in the model's performance on unseen data.
 
 
 \subsubsection*{Random Forest Misclassification Rates}
 
-The random forest model, built with \textbf{100 trees}, achieved a \textbf{training misclassification rate of \(0.0 \pm 0.0\)}, similar to the decision tree. However, on the test set, the random forest performed significantly better, with a misclassification rate of \(\mathbf{0.217 \pm 0.053}\). This demonstrates that the random forest generalizes better to unseen data compared to the decision tree, reducing overfitting and improving test performance. The lower standard error also indicates more consistent performance across different test samples.
+The random forest model, built with \textbf{100 trees}, also achieved a perfect \textbf{training misclassification rate of \(0.0 \pm 0.0\)}. However, on the test set, the random forest performed significantly better, with a misclassification rate of \(\mathbf{0.217 \pm 0.053}\). This demonstrates that the random forest generalizes better to unseen data compared to the decision tree, reducing overfitting and improving test performance. The lower standard error indicates more consistent performance across test samples.
+
 
 \subsubsection*{Misclassification vs. Number of Trees}
 
 
-The plot below shows how the misclassification rate on the test set changes as the number of trees in the random forest increases. The shaded region represents the \textbf{standard error} of the misclassification rate, providing a measure of uncertainty.
+Figure~\ref{fig:misclassification_plot} illustrates how the misclassification rate on the test set evolves as the number of trees in the random forest grows. The shaded area represents the standard error, indicating uncertainty.
+
 \begin{figure}[h!]
     \centering
     \includegraphics[width=0.5\textwidth]{fig/misclassification_vs_trees}
     \caption{Misclassification Rate vs. Number of Trees in Random Forest}
     \label{fig:misclassification_plot}
 \end{figure}
-From Figure~\ref{fig:misclassification_plot}, we observe the following:
-\begin{itemize}
-    \item As the number of trees increases, the misclassification rate on the test set initially decreases, reaching a minimum at around \textbf{50 trees}.
-    \item Beyond 50 trees, the misclassification rate stabilizes, with no significant improvement in performance.
-    \item The standard error remains relatively constant, indicating that the model's performance is consistent across different numbers of trees once the forest is sufficiently large.
-\end{itemize}
-
-This behavior aligns with the theory of random forests: increasing the number of trees reduces variance and improves generalization, but beyond a certain point, the gains diminish. The results suggest that \textbf{50 trees} are sufficient for this dataset, as adding more trees does not significantly improve performance.
+%Key observations include:
+%\begin{itemize}
+%\item The misclassification rate decreases initially, reaching its lowest point at around \textbf{50 trees}.
+%\item Beyond 50 trees, the rate stabilizes, showing no notable improvement.
+%\item The standard error remains steady, suggesting consistent performance once the forest is sufficiently large.
+%\end{itemize}
+Key observations include: the misclassification rate decreases initially, reaching its lowest point at around \textbf{50 trees}. Beyond 50 trees, the rate stabilizes, showing no notable improvement. The standard error remains steady, suggesting consistent performance once the forest is sufficiently large.
+%These results match random forest theory: adding more trees reduces variance and improves performance, but after a certain point, the benefits slow down. For this dataset, 50 trees are enough, as adding more trees does not significantly improve the results.
 
 %------------------------------------------------
 
@@ -212,14 +200,15 @@ This behavior aligns with the theory of random forests: increasing the number of
 
 \subsubsection*{Permutation-Based Feature Importance}
 
-Variable importance in random forests can be computed using out-of-bag (OOB) samples. For each tree in the forest, the OOB samples (data not used to train the tree) are passed through the tree, and the prediction accuracy is recorded. To measure the importance of a variable, its values in the OOB samples are randomly permuted, and the accuracy is recomputed. The decrease in accuracy due to this permutation is averaged over all trees and used as the importance measure for the variable. This method effectively simulates the removal of the variable's contribution, providing a robust estimate of its predictive strength\cite{ESL}.
+
+We measured variable importance in random forests using out-of-bag (OOB) samples. For each tree, OOB samples (data not used in training) are passed through the tree to record prediction accuracy. To assess a variable's importance, its values in the OOB samples are permuted, and the accuracy is recalculated. The average decrease in accuracy across all trees, caused by this permutation, serves as the variable's importance measure. This approach simulates removing the variable's contribution, offering a reliable estimate of its predictive strength\cite{ESL}.
 
 \subsection*{Results}
 
 
 \subsubsection*{Variable Importance and Root Frequency}
 
-To analyze the importance of features in the dataset, we computed the variable importance for a random forest with \( n = 100 \) trees. For comparison, we also calculated the frequency of features appearing as the root split in 100 non-random trees trained on randomized data. The results are visualized in the Figure~\ref{fig:variable_importance}.
+To analyze the importance of features in the dataset, we computed the variable importance for a random forest with \( n = 100 \) trees. For comparison, we also calculated the frequency of features appearing as the root split in 100 non-random trees trained on randomized data.
 
 \begin{figure}[h!]
     \centering
@@ -227,15 +216,15 @@ To analyze the importance of features in the dataset, we computed the variable i
     \caption{Variable Importance (Random Forest) vs. Root Frequency (Non-Random Trees)}
     \label{fig:variable_importance}
 \end{figure}
-The plot shows the following key observations:
+
+Figure~\ref{fig:variable_importance} reveals that only two features appeared as the root split in non-random trees:
 \begin{itemize}
-    \item Only two features appeared as the root split in the non-random trees:
-        \begin{itemize}
-            \item \textbf{Feature 1548.0}: Ranked as the \textbf{5th most important} by the random forest, this feature appeared as the root split in \textbf{56\%} of the non-random trees.
-            \item \textbf{Feature 1546.0}: Ranked as the \textbf{4th most important} by the random forest, this feature appeared as the root split in \textbf{44\%} of the non-random trees.
-        \end{itemize}
-    \item The random forest identified additional important features (e.g., 1550.0, 1552.0, 1720.0) that did not appear as root splits in the non-random trees, highlighting the ability of random forests to capture complex interactions beyond simple root splits.
+\item
+ \textbf{Feature 1548.0}: Ranked 5th in importance by the random forest, it appeared as the root split in 56\% of non-random trees.
+\item
+\textbf{Feature 1546.0}: Ranked 4th in importance by the random forest, it appeared as the root split in 44\% of non-random trees.
 \end{itemize}
+
 
 
 %------------------------------------------------
@@ -244,8 +233,7 @@ The plot shows the following key observations:
 
 
 \subsubsection*{Extended Variable Importance to Combinations of Three Variables}
-To extend variable importance to combinations of three variables, we implemented the \textbf{importance3()} method. This method evaluates the importance of feature combinations by permuting the values of three features simultaneously and measuring the resulting drop in prediction accuracy.
-This approach captures interactions between features, which are often critical in complex datasets like the TKI resistance data. We applied this method to a random forest with \( n = 1000 \) trees and compared its performance to the original single-feature importance method.
+To extend variable importance to combinations of three variables, we implemented the \textbf{importance3()} method. This approach permutes three features simultaneously and measures the drop in prediction accuracy, capturing critical feature interactions. We applied this method to a random forest with n=1000 trees and compared it to the single-feature importance method by comparing the performance of a tree on the best three features identified by each method.
 
 \subsubsection*{Tree Structure-Based Importance}
 In scenarios where the original data is unavailable but a pre-built forest exists, we implemented the \textbf{importance3\_structure()} method. This method identifies the best combination of three variables by analyzing the structure of the trees in the forest:
@@ -254,32 +242,40 @@ In scenarios where the original data is unavailable but a pre-built forest exist
     \item The combination with the highest frequency across all trees is selected as the most important.
 \end{itemize}
 
-\subsection*{Results}
-
 \subsubsection*{Comparison of Classification Trees}
-We trained classification trees using the top 3 features identified by three different methods:
-\begin{itemize}
-    \item \textbf{Single-Feature Importance}: The top 3 features were \textbf{['1548.0', '1552.0', '1550.0']}, achieving an accuracy of \textbf{58.33\%}.
-    \item \textbf{3-Feature Combination Importance}: The top combination was \textbf{['1660.0', '1550.0', '1558.0']}, achieving an accuracy of \textbf{63.33\%}.
-    \item \textbf{Tree Structure-Based Importance}: The top combination was \textbf{['1784.0', '1546.0', '1554.0']}, achieving an accuracy of \textbf{63.33\%}.
-\end{itemize}
 
-\subsubsection*{Key Observations}
-\begin{itemize}
-    \item The classification trees built using the top 3-feature combinations (\textbf{importance3} and \textbf{importance3\_structure}) outperformed the tree built using the top 3 single features, achieving an accuracy of \textbf{63.33\%} compared to \textbf{58.33\%}.
-    \item Both 3-feature combination methods (\textbf{importance3} and \textbf{importance3\_structure}) performed equally well, suggesting that considering feature interactions is crucial for improving model performance.
-    \item The \textbf{importance3\_structure} method, which relies on the structure of the pre-built forest, identified a different combination of features (\textbf{['1784.0', '1546.0', '1554.0']}) but achieved the same accuracy as \textbf{importance3}. This demonstrates that the tree structure-based approach is effective even without access to the original data.
-\end{itemize}
+\begin{table}[h!]
+\centering
+\caption{Classification Tree Performance Using Top 3 Features Identified by Different Methods}
+\label{tab:feature_performance}
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Importance Method} & \textbf{Top 3 Features} & \textbf{Accuracy} \\ \hline
+Single-Feature & ['1548', '1552', '1550'] & 58.33\% \\ \hline
+3-Feature Combination & ['1660', '1550', '1558'] & 63.33\% \\ \hline
+Tree Structure-Based & ['1784', '1546', '1554'] & 63.33\% \\ \hline
+\end{tabular}
+\end{table}
+
+%\subsubsection*{Key Observations}
+%\begin{itemize}
+%    \item The classification trees built using the top 3-feature combinations (\textbf{importance3} and \textbf{importance3\_structure}) outperformed the tree built using the top 3 single features, achieving an accuracy of \textbf{63.33\%} compared to \textbf{58.33\%}.
+%    \item Both 3-feature combination methods (\textbf{importance3} and \textbf{importance3\_structure}) performed equally well, suggesting that considering feature interactions is crucial for improving model performance.
+%    \item The \textbf{importance3\_structure} method, which relies on the structure of the pre-built forest, identified a different combination of features (\textbf{['1784.0', '1546.0', '1554.0']}) but achieved the same accuracy as \textbf{importance3}. This demonstrates that the tree structure-based approach is effective even without access to the original data.
+%\end{itemize}
+
+%\subsubsection*{Why the Tree Structure-Based Method Works Well}
+%
+%Since we only have access to the random forest and not the original data, the method analyzes all splits in the trees to extract the features used. By tracking the frequency of 3-feature combinations across the forest, it selects the combination that appears most frequently. This works well because features that are frequently used together in splits are likely to capture important patterns in the data and effectively partition it. In a random forest, features that are frequently used in splits are those that provide the most information gain or Gini impurity reduction. If a combination of features is frequently used together, it suggests that these features collectively contribute to better splits, meaning they capture important patterns in the data.
+%
+%
+%\subsubsection*{Why Counting Frequencies at All Levels is Important}
+%
+%Counting frequencies of all features at every level, rather than just high-level features, ensures a comprehensive understanding of the data. High-level splits capture global patterns, while lower-level splits refine these with localized, nuanced interactions. Ignoring lower levels risks missing critical feature combinations that only become apparent deeper in the trees. Additionally, random forests introduce variability across trees, so evaluating all levels ensures robustness and avoids bias. This approach balances global and local importance, capturing hierarchical interactions and leading to more accurate feature selection and data partitioning.
 
 \subsubsection*{Why the Tree Structure-Based Method Works Well}
 
-Since we only have access to the random forest and not the original data, the method analyzes all splits in the trees to extract the features used. By tracking the frequency of 3-feature combinations across the forest, it selects the combination that appears most frequently. This works well because features that are frequently used together in splits are likely to capture important patterns in the data and effectively partition it. In a random forest, features that are frequently used in splits are those that provide the most information gain or Gini impurity reduction. If a combination of features is frequently used together, it suggests that these features collectively contribute to better splits, meaning they capture important patterns in the data.
-
-
-\subsubsection*{Why Counting Frequencies at All Levels is Important}
-
-Counting frequencies of all features at every level, rather than just high-level features, ensures a comprehensive understanding of the data. High-level splits capture global patterns, while lower-level splits refine these with localized, nuanced interactions. Ignoring lower levels risks missing critical feature combinations that only become apparent deeper in the trees. Additionally, random forests introduce variability across trees, so evaluating all levels ensures robustness and avoids bias. This approach balances global and local importance, capturing hierarchical interactions and leading to more accurate feature selection and data partitioning.
-
+The tree structure-based method works effectively because it analyzes all splits in the random forest to extract feature usage, even without access to the original data. By tracking the frequency of 3-feature combinations across the forest, it identifies the most frequently used combinations, which are likely to capture important patterns and partition the data effectively. Features frequently used in splits are those that provide the most information gain or Gini impurity reduction, indicating their importance. Counting frequencies at all levels, not just high-level splits, ensures a comprehensive understanding of the data. High-level splits capture global patterns, while lower-level splits refine these with more detailed, localized interactions. Ignoring lower levels risks missing critical feature combinations that only become apparent deeper in the trees. Additionally, evaluating all levels ensures robustness to variability across trees, avoids bias, and balances global and local importance, leading to more accurate feature selection and data partitioning.
 
 
 
