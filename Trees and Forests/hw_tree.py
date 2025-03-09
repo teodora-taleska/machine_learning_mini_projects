@@ -1,5 +1,6 @@
 import csv
 import numpy as np
+import pandas as pd
 import random
 import time
 from tqdm import tqdm
@@ -356,6 +357,7 @@ def plot_variable_importance(X, y, feature_names):
     print(f"⌛ RF with 100 estimations built in {build_time:.2f} seconds")
 
     importances = model.importance()
+    importances = np.round(importances, 2)
 
     # train 100 non-random trees on randomized data and collect root features
     print('Collecting root features...')
@@ -369,26 +371,44 @@ def plot_variable_importance(X, y, feature_names):
         if tree_model.root and 'feature' in tree_model.root:
             root_features[tree_model.root['feature']] += 1
 
-    root_features /= 100  # convert to frequency
+    root_features = np.round(root_features / 100, 2)
+
+    # for tabular representation
+    feature_data = pd.DataFrame({
+        'Feature': feature_names,
+        'RF Importance': importances,
+        'Root Frequency': root_features
+    })
+
+    # sort by RF importance and select top 15 features
+    top_features = feature_data.sort_values(by='RF Importance', ascending=False).head(15)
+    print("Top 15 Features:")
+    print(top_features.to_string(index=False))
+
+    fig, ax = plt.subplots(figsize=(6, 6))
+    ax.axis('tight')
+    ax.axis('off')
+    table = ax.table(cellText=top_features.values,
+                     colLabels=top_features.columns,
+                     cellLoc='center', loc='center')
+    table.auto_set_font_size(False)
+    table.set_fontsize(10)
+    table.scale(0.8, 1.2)
+    plt.savefig('visualizations/variable_importance_table.png')
 
     plt.figure(figsize=(12, 6))
     indices = np.arange(X.shape[1])
-
     plt.bar(indices - 0.2, importances, width=0.4, label='Random Forest Importance')
     plt.bar(indices + 0.2, root_features, width=0.4, label='Root Features (100 Trees)')
 
     plt.xlabel('Feature Index')
     plt.ylabel('Importance / Frequency')
     plt.title('Feature Importance in Random Forest & Root Features in Trees')
-
     plt.xticks(indices, feature_names, rotation=45, ha='right')
     plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True, prune='both'))
-
     plt.legend()
     plt.tight_layout()
-
     plt.savefig('visualizations/variable_importance.png')
-
     plt.show()
 
 
@@ -486,12 +506,12 @@ def train_and_compare(learn, test):
 if __name__ == "__main__":
     learn, test, legend = tki()
 
-    print("full", hw_tree_full(learn, test))
-    print("random forests", hw_randomforests(learn, test))
+    # print("full", hw_tree_full(learn, test))
+    # print("random forests", hw_randomforests(learn, test))
 
-    # print('variable importance', plot_variable_importance(learn[0], learn[1], legend))
+    print('variable importance', plot_variable_importance(learn[0], learn[1], legend))
     # print('misclassification vs trees', plot_misclassification_vs_trees(learn, test))
 
-    print('train and compare', train_and_compare(learn, test))
+    # print('train and compare', train_and_compare(learn, test))
 
 
