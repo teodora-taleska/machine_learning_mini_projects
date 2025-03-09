@@ -385,14 +385,14 @@ def plot_variable_importance(X, y, feature_names):
     print("Top 15 Features:")
     print(top_features.to_string(index=False))
 
-    fig, ax = plt.subplots(figsize=(6, 6))
+    fig, ax = plt.subplots(figsize=(5, 4))
     ax.axis('tight')
     ax.axis('off')
     table = ax.table(cellText=top_features.values,
                      colLabels=top_features.columns,
                      cellLoc='center', loc='center')
     table.auto_set_font_size(False)
-    table.set_fontsize(10)
+    table.set_fontsize(9)
     table.scale(0.8, 1.2)
     plt.savefig('visualizations/variable_importance_table.png')
 
@@ -403,7 +403,7 @@ def plot_variable_importance(X, y, feature_names):
 
     plt.xlabel('Feature Index')
     plt.ylabel('Importance / Frequency')
-    plt.title('Feature Importance in Random Forest & Root Features in Trees')
+    # plt.title('Feature Importance in Random Forest & Root Features in Trees')
     plt.xticks(indices, feature_names, rotation=45, ha='right')
     plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True, prune='both'))
     plt.legend()
