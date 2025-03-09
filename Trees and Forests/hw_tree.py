@@ -241,7 +241,6 @@ class RFModel:
             X_oob, y_oob = self.X_train[oob_idx], self.y_train[oob_idx]
             feature_combos = list(combinations(features, 3))
 
-            # vectorized shuffling
             X_oob_shuffled = X_oob.copy()
             shuffled_accuracies = np.zeros(len(feature_combos))
 
@@ -398,7 +397,7 @@ def plot_variable_importance(X, y, feature_names):
     table.auto_set_font_size(False)
     table.set_fontsize(9)
     table.scale(0.8, 1.2)
-    plt.savefig('visualizations/variable_importance_table.png')
+    # plt.savefig('visualizations/variable_importance_table.png')
 
     plt.figure(figsize=(12, 6))
     indices = np.arange(X.shape[1])
@@ -413,7 +412,7 @@ def plot_variable_importance(X, y, feature_names):
     plt.yticks(fontsize=12)
     plt.legend(fontsize=14)
     plt.tight_layout()
-    plt.savefig('visualizations/variable_importance.png')
+    # plt.savefig('visualizations/variable_importance.png')
     plt.show()
 
 
@@ -450,8 +449,8 @@ def plot_misclassification_vs_trees(train, test, tree_counts=None):
     # plt.title("Misclassification Rate vs. Number of Trees")
     plt.legend()
 
-    save_path = "visualizations/misclassification_vs_trees.png"
-    plt.savefig(save_path)
+    # save_path = "visualizations/misclassification_vs_trees.png"
+    # plt.savefig(save_path)
     plt.show()
 
     # create a table with the results
@@ -469,8 +468,8 @@ def plot_misclassification_vs_trees(train, test, tree_counts=None):
     ax.axis('off')
     ax.table(cellText=cell_text, colLabels=columns, loc='center', cellLoc='center', bbox=[0, 0, 1, 1])
 
-    table_save_path = "visualizations/misclassification_table.png"
-    plt.savefig(table_save_path, bbox_inches='tight')
+    # table_save_path = "visualizations/misclassification_table.png"
+    # plt.savefig(table_save_path, bbox_inches='tight')
     plt.show()
 
 
@@ -532,14 +531,11 @@ if __name__ == "__main__":
 
     print("random forests", hw_randomforests(learn, test))
 
-    # Uncomment if you want to check the variable importance plot for the model
-    # print('variable importance', plot_variable_importance(learn[0], learn[1], legend))
+    print('variable importance', plot_variable_importance(learn[0], learn[1], legend))
 
-    # Uncomment if you want to plot the misclassification rate against the number of trees in the random forest
-    # print('misclassification vs trees', plot_misclassification_vs_trees(learn, test))
+    print('misclassification vs trees', plot_misclassification_vs_trees(learn, test))
 
-    # Uncomment if you want to train and compare the models based on the top 3 features
-    # print('train and compare', train_and_compare(learn, test, legend))
+    print('train and compare', train_and_compare(learn, test, legend))
 
 # ----------------------------------------------------------------------------------------------- #
 
