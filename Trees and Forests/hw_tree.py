@@ -402,15 +402,16 @@ def plot_variable_importance(X, y, feature_names):
 
     plt.figure(figsize=(12, 6))
     indices = np.arange(X.shape[1])
-    plt.bar(indices - 0.2, importances, width=0.4, label='Random Forest Importance')
-    plt.bar(indices + 0.2, root_features, width=0.4, label='Root Features (100 Trees)')
+    plt.bar(indices - 0.2, importances, width=0.6, label='Random Forest Importance')
+    plt.bar(indices + 0.2, root_features, width=0.6, label='Root Features (100 Trees)')
 
-    plt.xlabel('Feature Index')
-    plt.ylabel('Importance / Frequency')
+    plt.xlabel('Feature Index', fontsize=14)
+    plt.ylabel('Importance / Frequency', fontsize=14)
     # plt.title('Feature Importance in Random Forest & Root Features in Trees')
-    plt.xticks(indices, feature_names, rotation=45, ha='right')
+    plt.xticks(indices, feature_names, rotation=45, ha='right', fontsize=14)
     plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True, prune='both'))
-    plt.legend()
+    plt.yticks(fontsize=12)
+    plt.legend(fontsize=14)
     plt.tight_layout()
     plt.savefig('visualizations/variable_importance.png')
     plt.show()
@@ -473,7 +474,7 @@ def plot_misclassification_vs_trees(train, test, tree_counts=None):
     plt.show()
 
 
-def train_and_compare(learn, test):
+def train_and_compare(learn, test, feature_names):
     """
     Train a RandomForest with 1000 trees, extract feature importance,
     and compare the performance of single Tree models with the top features.
@@ -496,15 +497,19 @@ def train_and_compare(learn, test):
     top1_importance3 = [a, b, c]
     top1_importance3_structure = list(importance3_structure)
 
-    print("Top 3 features (single importance):", top3_importance)
-    print("Top feature combination (importance3):", top1_importance3)
-    print("Top feature combination (importance3_structure):", top1_importance3_structure)
+    top3_importance_names = [feature_names[i] for i in top3_importance]
+    top1_importance3_names = [feature_names[i] for i in top1_importance3]
+    top1_importance3_structure_names = [feature_names[i] for i in top1_importance3_structure]
+
+    print("Top 3 features (single importance):", top3_importance_names)
+    print("Top feature combination (importance3):", top1_importance3_names)
+    print("Top feature combination (importance3_structure):", top1_importance3_structure_names)
 
     combs = [top3_importance, top1_importance3, top1_importance3_structure]
     results = {}
 
     for c in combs:
-        print(f"Training Tree with features {c}...")
+        print(f"Training Tree with features {[feature_names[i] for i in c]}...")
         X_train_feature = X_train[:, c]
         X_test_feature = X_test[:, c]
 
@@ -514,8 +519,8 @@ def train_and_compare(learn, test):
         y_pred = tree_model.predict(X_test_feature)
         accuracy = np.mean(y_pred == y_test)
 
-        results[tuple(c)] = accuracy
-        print(f"Accuracy with feature {c}: {accuracy:.4f}")
+        results[tuple(feature_names[i] for i in c)] = accuracy
+        print(f"Accuracy with features {[feature_names[i] for i in c]}: {accuracy:.4f}")
 
     return results
 
@@ -523,9 +528,9 @@ def train_and_compare(learn, test):
 if __name__ == "__main__":
     learn, test, legend = tki()
 
-    # print("full", hw_tree_full(learn, test))
+    print("full", hw_tree_full(learn, test))
 
-    # print("random forests", hw_randomforests(learn, test))
+    print("random forests", hw_randomforests(learn, test))
 
     # Uncomment if you want to check the variable importance plot for the model
     # print('variable importance', plot_variable_importance(learn[0], learn[1], legend))
@@ -534,7 +539,7 @@ if __name__ == "__main__":
     # print('misclassification vs trees', plot_misclassification_vs_trees(learn, test))
 
     # Uncomment if you want to train and compare the models based on the top 3 features
-    # print('train and compare', train_and_compare(learn, test))
+    # print('train and compare', train_and_compare(learn, test, legend))
 
 # ----------------------------------------------------------------------------------------------- #
 
