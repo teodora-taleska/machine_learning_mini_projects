@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (MiKTeX 24.1) (preloaded format=pdflatex 2024.12.8)  9 MAR 2025 21:06
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (MiKTeX 24.1) (preloaded format=pdflatex 2024.12.8)  9 MAR 2025 21:33
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1159,7 +1159,7 @@ Overfull \hbox (7.82454pt too wide) in paragraph at lines 199--200
  []
 
 [2 <./fig/misclassification_vs_trees.png>]
-<fig/variable_importance.png, id=53, 867.24pt x 433.62pt>
+<fig/variable_importance.png, id=55, 867.24pt x 433.62pt>
 File: fig/variable_importance.png Graphic file (type png)
 <use fig/variable_importance.png>
 Package pdftex.def Info: fig/variable_importance.png  used on input line 231.
@@ -1176,18 +1176,20 @@ Overfull \hbox (9.11018pt too wide) in paragraph at lines 260--262
  []
 
 [3 <./fig/variable_importance.png>] (report.bbl)
+[leftcolumn badness]: 1000000 on 18.01028pt
+[rightcolumn badness]: 1000000 on 18.01028pt
 - LAST -
 Extra skip:0.0pt
-Left:441.54993pt/2.16492pt
-Right:449.6653pt/0.14496pt
-Split: 446.6076pt
-Output:446.6076pt
+Left:394.29997pt/0.0pt
+Right:416.6653pt/0.14496pt
+Split: 411.98264pt
+Output:411.98264pt
 Pageshrink: 9.0pt
-Pagestretch: 12.0pt
+Pagestretch: 11.0pt
 @colht:666.9326pt
-FLUSHEND [output]: 446.6076pt
-FLUSHEND [leftcolumn badness]: 0
-FUSHEND [rightcolumn badness]: 4
+FLUSHEND [output]: 411.98264pt
+FLUSHEND [leftcolumn badness]: 33
+FUSHEND [rightcolumn badness]: 61
  [4]
 
 enddocument/afterlastpage: lastpage setting LastPage.
@@ -1208,13 +1210,13 @@ Package rerunfilecheck Info: File `report.out' has not changed.
 (rerunfilecheck)             Checksum: 4CBF47DA79EECE24C40BECA3C64A89D3;100.
  ) 
 Here is how much of TeX's memory you used:
- 28268 strings out of 474486
- 515268 string characters out of 5742811
+ 28272 strings out of 474486
+ 515314 string characters out of 5742811
  1947542 words of memory out of 5000000
- 49792 multiletter control sequences out of 15000+600000
+ 49796 multiletter control sequences out of 15000+600000
  608588 words of font info for 278 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 99i,12n,101p,1005b,597s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 99i,12n,101p,1005b,599s stack positions out of 10000i,1000n,20000p,200000b,200000s
 <C:/Users/Teodora/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/c
 m/cmmi10.pfb><C:/Users/Teodora/AppData/Local/Programs/MiKTeX/fonts/type1/public
 /amsfonts/cm/cmr10.pfb><C:/Users/Teodora/AppData/Local/Programs/MiKTeX/fonts/ty
@@ -1229,9 +1231,9 @@ ers/Teodora/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmb8a.pfb><C:/
 Users/Teodora/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmr8a.pfb><C
 :/Users/Teodora/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmri8a.pfb
 >
-Output written on report.pdf (4 pages, 203230 bytes).
+Output written on report.pdf (4 pages, 203313 bytes).
 PDF statistics:
- 120 PDF objects out of 1000 (max. 8388607)
+ 122 PDF objects out of 1000 (max. 8388607)
  12 named destinations out of 1000 (max. 500000)
  73252 words of extra memory for PDF output out of 74296 (max. 10000000)
 
