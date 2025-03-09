@@ -85,7 +85,7 @@ letterpaper]{geometry}%
 %----------------------------------------------------------------------------------------
 
 \setlength{\columnsep}{0.55cm} % Distance between the two columns of text
-\setlength{\fboxrule}{0.75pt} % Width of the border around the abstract
+%\setlength{\fboxrule}{0.75pt} % Width of the border around the abstract
 
 
 %----------------------------------------------------------------------------------------
@@ -224,8 +224,8 @@ justification=raggedright]{caption}
 \newcommand{\Archive}[1]{\def\@Archive{#1}}
 \newcommand{\Authors}[1]{\def\@Authors{#1}}
 \newcommand{\JournalInfo}[1]{\def\@JournalInfo{#1}}
-\newcommand{\Abstract}[1]{\def\@Abstract{#1}}
-\newcommand{\Keywords}[1]{\def\@Keywords{#1}}
+%\newcommand{\Abstract}[1]{\def\@Abstract{#1}}
+%\newcommand{\Keywords}[1]{\def\@Keywords{#1}}
 
 % ---------------------------------------------------------------------
 
@@ -240,25 +240,25 @@ justification=raggedright]{caption}
 \vskip10pt%
 {\raggedright\color{color1}\sffamily\fontsize{12}{16}\selectfont  \@Authors\par}%
 \vskip18pt%
-\fcolorbox{color1}{white}{%
-\parbox{\textwidth-2\fboxsep-2\fboxrule}{\centering%
-\colorbox{color2!50}{%
-\parbox{\textwidth-4\fboxsep-2\fboxrule}{%
-\ifx\@Keywords\@empty%
-\sffamily\textbf{\abstractname}\\[4pt]\@Abstract%
-\else%
-\sffamily\textbf{\abstractname}\\[4pt]\@Abstract\\[4pt]%
-\textbf{\keywordname}\\\@Keywords%
-\fi%
-}%
-}%
-\vskip4pt%
-\begingroup%
-\raggedright\sffamily\small%
-\footnotesize\@affiliation\par%
-\endgroup%%
-}%
-}%
+% \fcolorbox{color1}{white}{%
+% \parbox{\textwidth-2\fboxsep-2\fboxrule}{\centering%
+% \colorbox{color2!50}{%
+% \parbox{\textwidth-4\fboxsep-2\fboxrule}{%
+% %\ifx\@Keywords\@empty%
+% %\sffamily\textbf{\abstractname}\\[4pt]\@Abstract%
+% %\else%
+% %\sffamily\textbf{\abstractname}\\[4pt]%
+% %\textbf{\keywordname}\\\@Keywords%
+% %\fi%
+% }%
+% }%
+% \vskip4pt%
+% \begingroup%
+% \raggedright\sffamily\small%
+% \footnotesize\@affiliation\par%
+% \endgroup%%
+% }%
+% }%
 \vskip25pt%
 }]%
 }

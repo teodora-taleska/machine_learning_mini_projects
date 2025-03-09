@@ -57,9 +57,9 @@ Implementation and Evaluation of Classification Trees and Random Forests for Bin
 %	ABSTRACT
 %----------------------------------------------------------------------------------------
 
-\Abstract{
-This report presents the implementation and evaluation of classification trees and random forests for binary classification tasks, specifically applied to the TKI resistance FTIR spectral data set. The methods utilized include building classification trees using Gini impurity for splitting and random forests with bootstrap sampling and random variable selection. The performance of the models was assessed using misclassification rates and standard errors, and variable importance was analyzed using permutation-based methods. The feature importance approach was extended by assessing combinations of three variables and tree structure-based importance. The findings offer insights into the effectiveness of these models and their performance in predictive tasks.
-}
+%\Abstract{
+%This report presents the implementation and evaluation of classification trees and random forests for binary classification tasks, specifically applied to the TKI resistance FTIR spectral data set. The methods utilized include building classification trees using Gini impurity for splitting and random forests with bootstrap sampling and random variable selection. The performance of the models was assessed using misclassification rates and standard errors, and variable importance was analyzed using permutation-based methods. The feature importance approach was extended by assessing combinations of three variables and tree structure-based importance. The findings offer insights into the effectiveness of these models and their performance in predictive tasks.
+%}
 
 %----------------------------------------------------------------------------------------
 
@@ -69,7 +69,7 @@ This report presents the implementation and evaluation of classification trees a
 \flushbottom 
 
 % Print the title and abstract box
-\maketitle 
+\maketitle
 
 % Removes page numbering from the first page
 \thispagestyle{empty} 
@@ -80,17 +80,16 @@ This report presents the implementation and evaluation of classification trees a
 
 \section*{Introduction}
 
-The objective of this project is to implement classification trees and random forests from scratch and evaluate their performance on the TKI resistance FTIR spectral dataset. The dataset consists of spectral measurements across multiple wavelengths for different cell lines, with a binary classification target.
+This project aims to build and test classification trees and random forests from scratch using the TKI resistance FTIR spectral dataset. The dataset includes spectral measurements at various wavelengths for different cell lines, with a binary target for classification.
 
-The project is divided into three parts:
+The project consists of three main parts:
 
 \begin{enumerate}
-\item Building and evaluating classification trees and random forests – Implementing the models, computing misclassification rates, and quantifying uncertainty.
-\item Variable importance analysis – Implementing permutation-based feature importance to identify the most relevant spectral variables.
-\item Extending feature importance analysis – Assessing variable interactions and analyzing tree structures to derive the most significant combinations of three variables.
+\item Building and testing classification trees and random forests – Creating the models, calculating error rates, and measuring uncertainty.
+\item Analyzing feature importance – Using permutation methods to find the most important spectral variables.
+\item Exploring feature interactions – Studying tree structures to identify the top three-variable combinations.
 \end{enumerate}
 
-This report details the implementation methodology, experimental results, and conclusions drawn from evaluating classification trees and random forests on the dataset.
 
 %------------------------------------------------
 
@@ -100,7 +99,7 @@ This report details the implementation methodology, experimental results, and co
 
 \subsubsection*{Classification Trees}
 
-In this project, \textbf{classification trees} were implemented, where the splits were made to minimize the \textbf{Gini impurity}. The Gini impurity measures the likelihood of an incorrect classification of a randomly chosen element if it was randomly labeled according to the class distribution in the subset\cite{MLPP}. The formula for Gini impurity is:
+In this project, \textbf{classification trees} were built by splitting data to minimize \textbf{Gini impurity}, which measures the chance of misclassifying a random element if labeled based on the subset's class distribution\cite{MLPP}. The Gini impurity is:
 
 \[
 \text{Gini}(D) = 1 - \sum_{c=1}^{C} \hat{\pi}_c^2
@@ -111,8 +110,6 @@ where:
     \item \( C \) is the number of classes,
     \item \( \hat{\pi}_c \) is the proportion of data points in \( D \) that belong to class \( c \).
 \end{itemize}
-
-The goal of the tree is to recursively partition the data into subsets that are as pure as possible (i.e., containing mostly one class), thereby reducing the Gini impurity at each split.
 
 %Additionally, the \textbf{misclassification rate} was used as an error measure to evaluate the quality of the splits. The misclassification rate is defined as\cite{MLPP}:
 %
@@ -128,22 +125,20 @@ The goal of the tree is to recursively partition the data into subsets that are 
 
 \subsubsection*{Random Forests}
 
-
-Random forests are an ensemble learning method designed to reduce the variance of predictions by averaging the outputs of multiple decision trees. Each tree is trained on a different subset of the data, chosen randomly with replacement (a technique known as \textbf{bagging})\cite{MLPP}. The final prediction is computed as:
+We also implemented \textbf{random forests}, an ensemble method that reduces prediction variance by averaging the outputs of multiple decision trees. Each tree is trained on a random subset of the data (using \textbf{bagging})\cite{MLPP}, and the final prediction is:
 
 \[
 f(x) = \frac{1}{M} \sum_{m=1}^{M} f_m(x),
 \]
-
 where \( f_m(x) \) is the prediction of the \( m \)-th tree, and \( M \) is the total number of trees in the forest.
-
-To further reduce correlation between trees, random forests introduce randomness in two ways:
-\begin{itemize}
-    \item \textbf{Random subsets of data}: Each tree is trained on a bootstrap sample of the dataset.
-    \item \textbf{Random subsets of features}: At each split, only a random subset of features is considered.
-\end{itemize}
-
-This decorrelation improves the model's predictive accuracy and robustness.
+%
+%To further reduce correlation between trees, random forests introduce randomness in two ways:
+%\begin{itemize}
+%    \item \textbf{Random subsets of data}: Each tree is trained on a bootstrap sample of the dataset.
+%    \item \textbf{Random subsets of features}: At each split, only a random subset of features is considered.
+%\end{itemize}
+%
+%This decorrelation improves the model's predictive accuracy and robustness.
 
 
 \subsubsection*{Quantifying Uncertainty}
@@ -249,11 +244,7 @@ The plot shows the following key observations:
 
 
 \subsubsection*{Extended Variable Importance to Combinations of Three Variables}
-To extend variable importance to combinations of three variables, we implemented the \textbf{importance3()} method. This method evaluates the importance of feature combinations by permuting the values of three features simultaneously and measuring the resulting drop in prediction accuracy. Specifically:
-\begin{itemize}
-    \item For each combination of three features, the values of these features are shuffled in the out-of-bag (OOB) samples.
-    \item The decrease in accuracy due to this permutation is averaged over all trees in the forest, providing a measure of the importance of the combination.
-\end{itemize}
+To extend variable importance to combinations of three variables, we implemented the \textbf{importance3()} method. This method evaluates the importance of feature combinations by permuting the values of three features simultaneously and measuring the resulting drop in prediction accuracy.
 This approach captures interactions between features, which are often critical in complex datasets like the TKI resistance data. We applied this method to a random forest with \( n = 1000 \) trees and compared its performance to the original single-feature importance method.
 
 \subsubsection*{Tree Structure-Based Importance}
