@@ -96,6 +96,10 @@ class Tree:
         left_indices = X[:, feature] <= threshold
         right_indices = X[:, feature] > threshold
 
+        if len(y[left_indices]) == 0 or len(y[right_indices]) == 0:
+            # If either subset is empty, return a leaf node with the majority class and prevent further splits
+            return {'prediction': np.argmax(np.bincount(y))}
+
         left_subtree = self._build_tree(X[left_indices], y[left_indices], depth + 1)
         right_subtree = self._build_tree(X[right_indices], y[right_indices], depth + 1)
 
@@ -520,11 +524,17 @@ if __name__ == "__main__":
     learn, test, legend = tki()
 
     # print("full", hw_tree_full(learn, test))
+
     # print("random forests", hw_randomforests(learn, test))
 
+    # Uncomment if you want to check the variable importance plot for the model
     # print('variable importance', plot_variable_importance(learn[0], learn[1], legend))
-    print('misclassification vs trees', plot_misclassification_vs_trees(learn, test))
 
+    # Uncomment if you want to plot the misclassification rate against the number of trees in the random forest
+    # print('misclassification vs trees', plot_misclassification_vs_trees(learn, test))
+
+    # Uncomment if you want to train and compare the models based on the top 3 features
     # print('train and compare', train_and_compare(learn, test))
 
+# ----------------------------------------------------------------------------------------------- #
 
