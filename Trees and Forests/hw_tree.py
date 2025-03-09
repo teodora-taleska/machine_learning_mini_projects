@@ -433,10 +433,6 @@ def plot_misclassification_vs_trees(train, test, tree_counts=None):
         test_errors.append(test_mis)
         test_std_errors.append(test_std)
 
-    print(f"Train Errors: {train_errors}")
-    print(f"Test Errors: {test_errors}")
-    print(f"Test Std Errors: {test_std_errors}")
-
     plt.figure(figsize=(8, 5))
     plt.plot(tree_counts, test_errors, marker='o', linestyle='-', color='b', label="Test Misclassification")
     plt.fill_between(tree_counts,
@@ -446,14 +442,31 @@ def plot_misclassification_vs_trees(train, test, tree_counts=None):
 
     plt.xlabel("Number of Trees")
     plt.ylabel("Misclassification Rate")
-    plt.title("Misclassification Rate vs. Number of Trees")
+    # plt.title("Misclassification Rate vs. Number of Trees")
     plt.legend()
 
     save_path = "visualizations/misclassification_vs_trees.png"
     plt.savefig(save_path)
     plt.show()
 
-    print(f"Plot saved to {save_path}")
+    # create a table with the results
+    cell_text = []
+    for i in range(len(tree_counts)):
+        train_mr = round(train_errors[i], 2)
+        test_mr = round(test_errors[i], 2)
+        test_std_err = round(test_std_errors[i], 2)
+
+        cell_text.append([tree_counts[i], train_mr, test_mr, test_std_err])
+
+    columns = ['#Trees', 'Train MR', 'Test MR', 'Test Std Err']
+
+    fig, ax = plt.subplots(figsize=(8, 4))
+    ax.axis('off')
+    ax.table(cellText=cell_text, colLabels=columns, loc='center', cellLoc='center', bbox=[0, 0, 1, 1])
+
+    table_save_path = "visualizations/misclassification_table.png"
+    plt.savefig(table_save_path, bbox_inches='tight')
+    plt.show()
 
 
 def train_and_compare(learn, test):
@@ -509,8 +522,8 @@ if __name__ == "__main__":
     # print("full", hw_tree_full(learn, test))
     # print("random forests", hw_randomforests(learn, test))
 
-    print('variable importance', plot_variable_importance(learn[0], learn[1], legend))
-    # print('misclassification vs trees', plot_misclassification_vs_trees(learn, test))
+    # print('variable importance', plot_variable_importance(learn[0], learn[1], legend))
+    print('misclassification vs trees', plot_misclassification_vs_trees(learn, test))
 
     # print('train and compare', train_and_compare(learn, test))
 
