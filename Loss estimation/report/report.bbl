@@ -1,0 +1,13 @@
+\begin{thebibliography}{1}
+
+\bibitem{MLPP}
+{ Kevin P. Murphy}.
+\newblock {\em {Machine Learning: A Probabilistic Perspective}}.
+\newblock {The MIT Press}, 2012.
+
+\bibitem{ESL}
+{ Trevor Hastie, Robert Tibshirani, Jerome Friedma}.
+\newblock {\em {The Elements of Statistical Learning: Data Mining, Inference,
+  and Prediction}}.
+
+\end{thebibliography}
