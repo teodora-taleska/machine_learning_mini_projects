@@ -3,7 +3,7 @@ import unittest
 
 import numpy as np
 import time
-from hw_tree import Tree, RandomForest, hw_tree_full, hw_randomforests
+from hw_tree import Tree, RandomForest, hw_tree_full, hw_randomforests, all_columns
 from scipy.stats import norm
 
 
@@ -166,6 +166,67 @@ class MyTests(unittest.TestCase):
         rf_model = self.forest.build(self.X_train, same_y)
         prediction = rf_model.predict(self.X_test)
         self.assertTrue(all(p == 1 for p in prediction))  # Should always predict 1
+
+
+class MyTest(unittest.TestCase):
+
+    def setUp(self):
+        self.X = np.array([
+            [1, 10, 5, 100],
+            [2, 20, 10, 200],
+            [2, 20, 5, 100],
+            [3, 30, 15, 300],
+            [3, 30, 15, 300],
+            [3, 30, 5, 100]
+        ])
+
+        self.y = np.array([0, 0, 1, 1, 0, 1])
+
+        self.X_1 = np.array([[2, 20, 10, 200],
+                             [2, 20, 10, 200],
+                             [2, 20, 10, 200]])
+        self.y_1 = np.array([0, 0, 1])
+
+    def test_tree_splits(self):
+        t = Tree(rand=None, get_candidate_columns=all_columns)
+        tree_model = t.build(self.X, self.y)
+
+        # check first split should be feature_1 value:1
+        self.assertEqual(tree_model.root["feature"], 0)
+        self.assertEqual(tree_model.root["threshold"], 1.5)
+
+        # check left_subtree is pure and class 0
+        left_subtree = tree_model.root["left"]
+        self.assertEqual(left_subtree["prediction"], 0)
+
+        # check right_subtree is split by feature_3 value:5
+        right_subtree = tree_model.root["right"]
+        self.assertEqual(right_subtree["feature"], 2)
+        self.assertEqual(right_subtree["threshold"], 7.5)
+
+        # check right_left_subtree is pure and class 1
+        right_left_subtree = right_subtree["left"]
+        self.assertEqual(right_left_subtree["prediction"], 1)
+
+        # check right_right_subtree
+        right_right_subtree = right_subtree["right"]
+        self.assertEqual(right_right_subtree["feature"], 0)
+        self.assertEqual(right_right_subtree["threshold"], 2.5)
+
+        # check right_right_left subtree is pure and class 0
+        right_right_left_subtree = right_right_subtree["left"]
+        self.assertEqual(right_right_left_subtree["prediction"], 0)
+
+        # check right_right_right subtree predicts class 0
+        right_right_right_subtree = right_right_subtree["right"]
+        self.assertEqual(right_right_right_subtree["prediction"], 0)
+
+    def test_tree_edge_case1(self):
+        # properly handle when multiple rows have same feature values, but different classes
+        t = Tree(rand=None, get_candidate_columns=all_columns)
+        tree_model = t.build(self.X_1, self.y_1)
+        self.assertEqual(tree_model.root["prediction"], 0)
+
 
 if __name__ == '__main__':
     unittest.main()
