@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (MiKTeX 24.1) (preloaded format=pdflatex 2024.12.8)  23 MAR 2025 19:10
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (MiKTeX 24.1) (preloaded format=pdflatex 2024.12.8)  23 MAR 2025 22:34
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1117,7 +1117,20 @@ Overfull \hbox (5.32643pt too wide) in paragraph at lines 108--117
 Teodora/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/base/8r.enc}
 
 
- <./logo.pdf>] (report.bbl) [2] 
+ <./logo.pdf>] (report.bbl)
+- LAST -
+Extra skip:0.0pt
+Left:619.74945pt/2.16492pt
+Right:645.36523pt/2.16492pt
+Split: 634.26477pt
+Output:634.26477pt
+Pageshrink: 27.0pt
+Pagestretch: 37.0pt
+@colht:666.9326pt
+FLUSHEND [output]: 634.26477pt
+FLUSHEND [leftcolumn badness]: 28
+FUSHEND [rightcolumn badness]: 13
+ [2] 
 enddocument/afterlastpage: lastpage setting LastPage.
 (report.aux)
  ***********
@@ -1132,40 +1145,34 @@ LaTeX Font Warning: Size substitutions with differences
 
 LaTeX Font Warning: Some font shapes were not available, defaults substituted.
 
-
-LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
-
 Package rerunfilecheck Info: File `report.out' has not changed.
 (rerunfilecheck)             Checksum: DF7471697CDA28C23992EFF629CC8239;99.
  ) 
 Here is how much of TeX's memory you used:
  28223 strings out of 474486
- 514254 string characters out of 5742811
- 1953542 words of memory out of 5000000
- 49760 multiletter control sequences out of 15000+600000
- 607519 words of font info for 272 fonts, out of 8000000 for 9000
+ 514304 string characters out of 5742811
+ 1961542 words of memory out of 5000000
+ 49764 multiletter control sequences out of 15000+600000
+ 607318 words of font info for 270 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 99i,12n,101p,1005b,477s stack positions out of 10000i,1000n,20000p,200000b,200000s
-
-pdfTeX warning (dest): name{page.3} has been referenced but does not exist, rep
-laced by a fixed one
-
-<C:/Users/Teodora/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/
-cmmi10.pfb><C:/Users/Teodora/AppData/Local/Programs/MiKTeX/fonts/type1/public/a
-msfonts/cm/cmr10.pfb><C:/Users/Teodora/AppData/Local/Programs/MiKTeX/fonts/type
-1/public/amsfonts/cm/cmss17.pfb><C:/Users/Teodora/AppData/Local/Programs/MiKTeX
-/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/Teodora/AppData/Local/Prog
-rams/MiKTeX/fonts/type1/public/amsfonts/symbols/msbm10.pfb><C:/Users/Teodora/Ap
-pData/Local/Programs/MiKTeX/fonts/type1/urw/helvetic/uhvb8a.pfb><C:/Users/Teodo
-ra/AppData/Local/Programs/MiKTeX/fonts/type1/urw/helvetic/uhvr8a.pfb><C:/Users/
-Teodora/AppData/Local/Programs/MiKTeX/fonts/type1/urw/symbol/usyr.pfb><C:/Users
-/Teodora/AppData/Local/Programs/MiKTeX/fonts/type1/urw/symbol/usyr.pfb><C:/User
-s/Teodora/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmb8a.pfb><C:/Us
-ers/Teodora/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmr8a.pfb><C:/
-Users/Teodora/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmri8a.pfb>
-Output written on report.pdf (2 pages, 136611 bytes).
+ 99i,12n,101p,1005b,566s stack positions out of 10000i,1000n,20000p,200000b,200000s
+<C:/Users/Teodora/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/c
+m/cmmi10.pfb><C:/Users/Teodora/AppData/Local/Programs/MiKTeX/fonts/type1/public
+/amsfonts/cm/cmr10.pfb><C:/Users/Teodora/AppData/Local/Programs/MiKTeX/fonts/ty
+pe1/public/amsfonts/cm/cmss17.pfb><C:/Users/Teodora/AppData/Local/Programs/MiKT
+eX/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/Teodora/AppData/Local/Pr
+ograms/MiKTeX/fonts/type1/public/amsfonts/symbols/msbm10.pfb><C:/Users/Teodora/
+AppData/Local/Programs/MiKTeX/fonts/type1/urw/helvetic/uhvb8a.pfb><C:/Users/Teo
+dora/AppData/Local/Programs/MiKTeX/fonts/type1/urw/helvetic/uhvr8a.pfb><C:/User
+s/Teodora/AppData/Local/Programs/MiKTeX/fonts/type1/urw/symbol/usyr.pfb><C:/Use
+rs/Teodora/AppData/Local/Programs/MiKTeX/fonts/type1/urw/symbol/usyr.pfb><C:/Us
+ers/Teodora/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmb8a.pfb><C:/
+Users/Teodora/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmr8a.pfb><C
+:/Users/Teodora/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmri8a.pfb
+>
+Output written on report.pdf (2 pages, 136138 bytes).
 PDF statistics:
  105 PDF objects out of 1000 (max. 8388607)
- 8 named destinations out of 1000 (max. 500000)
+ 7 named destinations out of 1000 (max. 500000)
  69146 words of extra memory for PDF output out of 74296 (max. 10000000)
 
