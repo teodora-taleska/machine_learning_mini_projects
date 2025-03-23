@@ -228,17 +228,16 @@ justification=raggedright]{caption}
 %\newcommand{\Keywords}[1]{\def\@Keywords{#1}}
 
 % ---------------------------------------------------------------------
-
 \renewcommand{\@maketitle}{%
 \twocolumn[{%
 \thispagestyle{empty}%
-{\includegraphics{logo}}
+{\includegraphics[scale=0.5]{logo}} % Adjust the scale to make the image smaller
 \vskip-74pt%
 {\raggedleft\small\sffamily\bfseries\@JournalInfo\\\@Archive\par}%
 \vskip64pt%
-{\raggedright\color{color1}\fontfamily{cmss}\fontseries{bc}\fontshape{n}\fontsize{20}{25}\selectfont \@PaperTitle\par}%
+{\raggedright\color{color1}\fontfamily{cmss}\fontseries{bc}\fontshape{n}\fontsize{16}{20}\selectfont \@PaperTitle\par} % Adjust the font size here
 \vskip10pt%
-{\raggedright\color{color1}\sffamily\fontsize{12}{16}\selectfont  \@Authors\par}%
+{\raggedright\color{color1}\sffamily\fontsize{10}{14}\selectfont  \@Authors\par}%
 \vskip18pt%
 % \fcolorbox{color1}{white}{%
 % \parbox{\textwidth-2\fboxsep-2\fboxrule}{\centering%
