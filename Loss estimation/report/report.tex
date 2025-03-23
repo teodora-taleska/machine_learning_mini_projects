@@ -80,7 +80,7 @@ The dataset consists of basketball shot data with the goal of predicting the \te
 Three models were compared: a \textit{Baseline Classifier} predicting the most frequent class, \textit{Logistic Regression} for multi-class classification, and \textit{Random Forest}, an ensemble model sensitive to hyperparameters such as the number of trees. Random Forest was chosen for its strong performance and sensitivity to hyperparameter tuning.
 
 \subsubsection*{Evaluation Method}
-The models were evaluated using \textit{5-fold cross-validation} with a 70-30 train-test split. The dataset contains 5024 instances, resulting in approximately 3500 training instances. With 5 folds, each fold contained around 700 instances, ensuring a balance between robust performance estimation and computational efficiency. For Random Forest, two hyperparameter tuning strategies were used: \textit{Standard Cross-Validation}, where hyperparameters were tuned on the training folds, and \textit{Nested Cross-Validation}, where an outer loop evaluated performance and an inner loop tuned hyperparameters.
+The models were evaluated using \textit{5-fold cross-validation} with a 70-30 train-test split. The dataset contains 5024 instances, resulting in approximately 3500 training instances. With 5 folds, each fold contained around 700 instances, ensuring a balance between robust performance estimation and computational efficiency. For Random Forest, two hyperparameter tuning strategies were used: \textit{Standard Cross-Validation}, where hyperparameters were tuned on the training folds, and \textit{Nested Cross-Validation}, where an outer loop evaluated performance and an inner loop tuned hyperparameters \cite{ESL}.
 
 \subsubsection*{Metrics}
 The models were evaluated using \textit{Accuracy}, the proportion of correctly predicted instances, and \textit{Log-Loss}, which measures the confidence of predicted probabilities for multi-class classification. Accuracy is defined as:
@@ -97,34 +97,99 @@ where \( N \) is the total number of instances, \( y_i \) is the true label, and
 
 where \( y_{i,c} \) is 1 if the true label of instance \( i \) is class \( c \), and \( p_{i,c} \) is the predicted probability of class \( c \).
 
+
 \subsection*{Results}
 
-% TODO: Present results and compare model performance.
+The performance of the models is summarized in Table \ref{tab:model_performance}, which reports the accuracy and log-loss of the models tested on the unseen test data, with the uncertainties coming from the cross-validation folds.
+
+\begin{table}[h]
+\centering
+\caption{Model Performance: Accuracy and Log-Loss (Mean ± Standard Error)}
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Model} & \textbf{Accuracy} & \textbf{Log-Loss} \\ \hline
+Baseline & \( 0.6001 \pm 0.0218 \) & \( 1.1684 \pm 0.0102 \) \\ \hline
+Logistic Regression & \( 0.7427 \pm 0.0198 \) & \( 0.6514 \pm 0.0076 \) \\ \hline
+RF (Standard CV) & \( 0.7732 \pm 0.0193 \) & \( 0.6032 \pm 0.0079 \) \\ \hline
+\textbf{RF (Nested CV)} & \( \mathbf{0.7752 \pm 0.0193} \) & \( \mathbf{0.6010 \pm 0.0089} \) \\ \hline
+\end{tabular}
+\label{tab:model_performance}
+\end{table}
+
+The results indicate that the Random Forest model with nested cross-validation (CV) outperforms both the baseline and logistic regression models, achieving the highest accuracy and lowest log-loss. Nested CV is beneficial as it performs an additional layer of cross-validation for hyperparameter tuning, leading to a more robust model and better generalization. This extra tuning likely explains why the Random Forest model trained with nested CV achieves superior performance compared to the standard cross-validation version. The logistic regression model, while improving upon the baseline, still lags behind the Random Forest models, highlighting the strength of ensemble methods in this context.
+
 
 %------------------------------------------------
-
 \section*{Part 2: Error Analysis and Adjusting for True Distribution}
 
 \subsection*{Assessing the Influence of Shot Distance on Prediction Errors}
 
-% TODO: Explain the approach (Spearman correlation).
+\subsubsection*{Methodology}
+To investigate whether prediction errors depend on shot distance, we used the \textit{Spearman rank correlation coefficient}. This non-parametric measure assesses the strength and direction of the monotonic relationship between two variables, making it suitable for this analysis because it does not assume a linear relationship between variables and it does not require normally distributed data.
+
+The Spearman correlation coefficient \( \rho \) is defined as:
+
+\[
+\rho = 1 - \frac{6 \sum d_i^2}{n(n^2 - 1)},
+\]
+where \( d_i \) is the difference between the ranks of corresponding values of the two variables and \( n \) is the number of observations.
+
+We calculated the Spearman correlation between the prediction errors (for each model) and the shot distance. A negative correlation indicates that errors tend to decrease as distance increases, while a positive correlation suggests the opposite. The significance of the correlation was assessed using the p-value, with a threshold of \( \alpha = 0.05 \).
 
 \subsubsection*{Results}
 
-% TODO: Summarize findings (weak correlation but not a strong dependency).
+The Spearman correlation coefficients and their corresponding p-values for each model are summarized in Table \ref{tab:spearman_results}.
+
+\begin{table}[h]
+\centering
+\caption{Spearman Correlation Between Prediction Errors and Shot Distance}
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Model} & \textbf{Spearman CC} & \textbf{p-value} \\ \hline
+Baseline & \(-0.143\) & \(2.45 \times 10^{-8}\) \\ \hline
+Logistic Regression & \(-0.081\) & \(0.0016\) \\ \hline
+RF (Standard CV) & \(-0.067\) & \(0.0089\) \\ \hline
+RF (Nested CV) & \(-0.075\) & \(0.0038\) \\ \hline
+\end{tabular}
+\label{tab:spearman_results}
+\end{table}
+
+\subsubsection*{Conclusion}
+The results in Table \ref{tab:spearman_results} show weak negative correlations between prediction errors and shot distance for all models, with p-values below \( \alpha = 0.05 \), indicating statistical significance. This suggests that errors tend to decrease slightly as shot distance increases, but the effect is weak. The strongest correlation was observed for the \textit{Baseline} model (\( \rho = -0.143 \)), while the \textit{Random Forest} models showed the weakest correlations (\( \rho = -0.067 \) and \( \rho = -0.075 \)). These findings indicate that shot distance has a minor influence on prediction errors, but it is not a strong determinant of model performance.
 
 
-\subsection*{Adjusting for True Distribution}
+\subsection*{Estimating Model Performance on the True Distribution}
 
-% TODO: Explain reweighting approach.
+\subsubsection*{Methodology}
+To estimate how the models would perform on data with the true relative frequencies of competition types (NBA: 0.6, EURO: 0.1, SLO1: 0.1, U14: 0.1, U16: 0.1), we re-weighted the evaluation metrics based on the true distribution. This approach accounts for the mismatch between the dataset's competition type distribution and the true distribution. The steps are as follows:
+\begin{itemize}
+    \item For each competition type, compute the model's accuracy and log-loss on the corresponding test samples.
+    \item Weight these metrics by the true relative frequencies of the competition types.
+    \item Aggregate the weighted metrics to obtain the overall performance estimate.
+\end{itemize}
+
+This re-weighting ensures that the evaluation reflects the model's performance on the true data distribution, where NBA games are more prevalent.
 
 \subsubsection*{Results}
 
+The re-weighted accuracy and log-loss for each model are summarized in Table \ref{tab:true_distribution_performance}.
 
-% TODO: Report performance changes (log-loss increase, accuracy stability).
-% TODO: Interpret the meaning of these changes.
+\begin{table}[h]
+\centering
+\caption{Model Performance on True Distribution: Accuracy and Log-Loss}
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Model} & \textbf{Accuracy} & \textbf{Log-Loss} \\ \hline
+Baseline & \( 0.6121 \) & \( 1.1953 \) \\ \hline
+Logistic Regression & \( 0.7405 \) & \( 0.8949 \) \\ \hline
+RF (Standard CV) & \( 0.7720 \) & \( 1.0308 \) \\ \hline
+\textbf{RF (Nested CV)} & \( \mathbf{0.7721} \) & \( \mathbf{1.0077} \) \\ \hline
+\end{tabular}
+\label{tab:true_distribution_performance}
+\end{table}
 
-
+\subsubsection*{Conclusion}
+The results in Table \ref{tab:true_distribution_performance} show that the \textit{Random Forest (Nested CV)} model achieved the highest accuracy (\( 0.7721 \)) and the lowest log-loss (\( 1.0077 \)) on the true distribution, outperforming the other models. However, compared to the results on the original dataset (where log-loss was significantly lower), the log-loss increased for all models, indicating that the models' confidence in their predictions degraded when evaluated on the true distribution. This suggests that the models are less calibrated for the true distribution, particularly for the more prevalent NBA competition type. Despite this, the accuracy remained relatively stable, showing that the models still make correct predictions at a similar rate.
 
 
 
