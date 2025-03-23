@@ -8,6 +8,7 @@ library(ggplot2)
 library(dplyr)
 library(stats)
 
+py_require('pandas')
 
 pickle <- import("pickle")
 pd <- import("pandas")
@@ -27,20 +28,16 @@ con$close()
 distances <- data$Distance
 test_indices_python <- results_p1$test_indices  # Get the Python Index object
 test_indices_r <- py_to_r(test_indices_python$values)  # Extract values from the pandas Index
-
-# Ensure the indices are in a numeric format
 test_indices_r <- as.numeric(test_indices_r)
 
-# Access the 'Distance' column using the indices
 distance_test <- data[test_indices_r, 'Distance']
 distance_test <- distance_test$Distance
 
 calculate_spearman <- function(errors, distance) {
-  result <- cor.test(errors, distance, method = "spearman", exact = TRUE)
+  result <- cor.test(errors, distance, method = "spearman", exact = FALSE)
   return(list(spearman_corr = result$estimate, p_value = result$p.value))
 }
 
-# Calculate Spearman correlation for each set of errors
 spearman_baseline <- calculate_spearman(results_p1$errors_baseline, distance_test)
 spearman_lr <- calculate_spearman(results_p1$errors_lr, distance_test)
 spearman_rf1 <- calculate_spearman(results_p1$errors_rf1, distance_test)
@@ -61,13 +58,12 @@ print(paste("Spearman correlation:", spearman_rf2$spearman_corr, "p-value:", spe
 
 # PART 2 - Estimating model performance on true distribution
 
-# Helper functions
 log_loss <- function(y_true, y_pred) {
   # Clip predicted probabilities to avoid log(0) or log(1)
   y_pred <- pmax(pmin(y_pred, 1 - 1e-10), 1e-10)
   
   # Convert y_true to one-hot encoding
-  n_classes <- ncol(y_pred)  # Number of classes inferred from y_pred
+  n_classes <- ncol(y_pred) 
   y_true_one_hot <- model.matrix(~ as.factor(y_true) - 1, data = data.frame(y_true = y_true))
   
   # Ensure y_true_one_hot has the same number of columns as y_pred
@@ -79,24 +75,20 @@ log_loss <- function(y_true, y_pred) {
     y_pred <- cbind(y_pred, matrix(0, nrow = nrow(y_pred), ncol = ncol(y_true_one_hot) - n_classes))
   }
   
-  # Compute log loss
   loss <- -mean(rowSums(y_true_one_hot * log(y_pred)))
   
   return(loss)
 }
 
 accuracy_score <- function(y_true, y_pred) {
-  # Compute the number of correct predictions
   correct <- sum(y_true == y_pred)
-
-  # Compute accuracy
   accuracy <- correct / length(y_true)
-
   return(accuracy)
 }
 
 competition_types <- data$Competition
 competition_types_test <- competition_types[test_indices_r]
+
 # Methodology - Re-weighting errors
 calculate_weighted_metrics <- function(y_true, y_pred, y_pred_proba, competition_types, weights) {
   log_loss_total <- 0
@@ -104,7 +96,7 @@ calculate_weighted_metrics <- function(y_true, y_pred, y_pred_proba, competition
 
   for (comp_type in names(weights)) {
     comp_mask <- (competition_types == comp_type)
-    if (sum(comp_mask) > 0) {  # Ensure there are samples for this competition type
+    if (sum(comp_mask) > 0) { # check if there are any samples for this competition type
       y_true_comp <- y_true[comp_mask]
       y_pred_comp <- y_pred[comp_mask]
       y_pred_proba_comp <- y_pred_proba[comp_mask, ]
@@ -150,7 +142,6 @@ log_loss_values <- sapply(weighted_metrics, function(x) x$log_loss)
 # Cap log loss values at 2.5 for visualization
 log_loss_values <- pmin(log_loss_values, 2.5)
 
-# Combine data into a data frame
 plot_data <- data.frame(
   Model = rep(models, 2),
   Metric = c(rep("Accuracy", length(models)), rep("Log Loss", length(models))),
