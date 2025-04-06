@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (MiKTeX 24.1) (preloaded format=pdflatex 2024.12.8)  23 MAR 2025 22:34
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (MiKTeX 24.1) (preloaded format=pdflatex 2024.12.8)  6 APR 2025 21:56
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1025,7 +1025,7 @@ Package microtype Info: No adjustment of character kerning.
 (C:\Users\Teodora\AppData\Local\Programs\MiKTeX\tex/latex/microtype\mt-ptm.cfg
 File: mt-ptm.cfg 2006/04/20 v1.7 microtype config. file: Times (RS)
 )
-<logo.pdf, id=10, 199.50937pt x 69.28143pt>
+<logo.pdf, id=34, 199.50937pt x 69.28143pt>
 File: logo.pdf Graphic file (type pdf)
 <use logo.pdf>
 Package pdftex.def Info: logo.pdf  used on input line 55.
@@ -1059,7 +1059,7 @@ Package microtype Info: Loading generic protrusion settings for font family
 (microtype)             For optimal results, create family-specific settings.
 (microtype)             See the microtype manual for details.
 LaTeX Font Info:    Trying to load font information for OT1+ztmcm on input line
- 63.
+ 66.
 (C:\Users\Teodora\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\ot1ztmcm.fd
 File: ot1ztmcm.fd 2000/01/03 Fontinst v1.801 font definitions for OT1/ztmcm.
 )
@@ -1068,29 +1068,29 @@ Package microtype Info: Loading generic protrusion settings for font family
 (microtype)             For optimal results, create family-specific settings.
 (microtype)             See the microtype manual for details.
 LaTeX Font Info:    Trying to load font information for OML+ztmcm on input line
- 63.
+ 66.
 
 (C:\Users\Teodora\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\omlztmcm.fd
 File: omlztmcm.fd 2000/01/03 Fontinst v1.801 font definitions for OML/ztmcm.
 )
 LaTeX Font Info:    Trying to load font information for OMS+ztmcm on input line
- 63.
+ 66.
 
 (C:\Users\Teodora\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\omsztmcm.fd
 File: omsztmcm.fd 2000/01/03 Fontinst v1.801 font definitions for OMS/ztmcm.
 )
 LaTeX Font Info:    Trying to load font information for OMX+ztmcm on input line
- 63.
+ 66.
 
 (C:\Users\Teodora\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\omxztmcm.fd
 File: omxztmcm.fd 2000/01/03 Fontinst v1.801 font definitions for OMX/ztmcm.
 )
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <12> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 63.
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 66.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <9> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 63.
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 66.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <7> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 63.
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 66.
 
 (C:\Users\Teodora\AppData\Local\Programs\MiKTeX\tex/latex/microtype\mt-msa.cfg
 File: mt-msa.cfg 2006/02/04 v1.1 microtype config. file: AMS symbols (a) (RS)
@@ -1099,38 +1099,16 @@ g
 File: mt-msb.cfg 2005/06/01 v1.0 microtype config. file: AMS symbols (b) (RS)
 )
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <10> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 88.
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 72.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <7.4> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 88.
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 72.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <6> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 88.
-LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 1
-07.
- (C:\Users\Teodora\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\ts1ptm.fd
-File: ts1ptm.fd 2001/06/04 font definitions for TS1/ptm.
-)
-Overfull \hbox (5.32643pt too wide) in paragraph at lines 108--117
- [][] 
- []
-
-[1{C:/Users/Teodora/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}{C:/Users/
-Teodora/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/base/8r.enc}
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 72.
+ [1{C:/Users/Teodora/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}{C:/Users
+/Teodora/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/base/8r.enc}
 
 
- <./logo.pdf>] (report.bbl)
-- LAST -
-Extra skip:0.0pt
-Left:619.74945pt/2.16492pt
-Right:645.36523pt/2.16492pt
-Split: 634.26477pt
-Output:634.26477pt
-Pageshrink: 27.0pt
-Pagestretch: 37.0pt
-@colht:666.9326pt
-FLUSHEND [output]: 634.26477pt
-FLUSHEND [leftcolumn badness]: 28
-FUSHEND [rightcolumn badness]: 13
- [2] 
+ <./logo.pdf>] 
 enddocument/afterlastpage: lastpage setting LastPage.
 (report.aux)
  ***********
@@ -1146,33 +1124,31 @@ LaTeX Font Warning: Size substitutions with differences
 LaTeX Font Warning: Some font shapes were not available, defaults substituted.
 
 Package rerunfilecheck Info: File `report.out' has not changed.
-(rerunfilecheck)             Checksum: DF7471697CDA28C23992EFF629CC8239;99.
+(rerunfilecheck)             Checksum: 3359B93AB7E6E22CE92BD7C92A129CD6;1406.
  ) 
 Here is how much of TeX's memory you used:
- 28223 strings out of 474486
- 514304 string characters out of 5742811
- 1961542 words of memory out of 5000000
- 49764 multiletter control sequences out of 15000+600000
- 607318 words of font info for 270 fonts, out of 8000000 for 9000
+ 28072 strings out of 474486
+ 512274 string characters out of 5742811
+ 1951542 words of memory out of 5000000
+ 49723 multiletter control sequences out of 15000+600000
+ 599876 words of font info for 199 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 99i,12n,101p,1005b,566s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 99i,7n,101p,1005b,486s stack positions out of 10000i,1000n,20000p,200000b,200000s
 <C:/Users/Teodora/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/c
 m/cmmi10.pfb><C:/Users/Teodora/AppData/Local/Programs/MiKTeX/fonts/type1/public
 /amsfonts/cm/cmr10.pfb><C:/Users/Teodora/AppData/Local/Programs/MiKTeX/fonts/ty
 pe1/public/amsfonts/cm/cmss17.pfb><C:/Users/Teodora/AppData/Local/Programs/MiKT
 eX/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/Teodora/AppData/Local/Pr
-ograms/MiKTeX/fonts/type1/public/amsfonts/symbols/msbm10.pfb><C:/Users/Teodora/
-AppData/Local/Programs/MiKTeX/fonts/type1/urw/helvetic/uhvb8a.pfb><C:/Users/Teo
-dora/AppData/Local/Programs/MiKTeX/fonts/type1/urw/helvetic/uhvr8a.pfb><C:/User
-s/Teodora/AppData/Local/Programs/MiKTeX/fonts/type1/urw/symbol/usyr.pfb><C:/Use
-rs/Teodora/AppData/Local/Programs/MiKTeX/fonts/type1/urw/symbol/usyr.pfb><C:/Us
-ers/Teodora/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmb8a.pfb><C:/
-Users/Teodora/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmr8a.pfb><C
-:/Users/Teodora/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmri8a.pfb
->
-Output written on report.pdf (2 pages, 136138 bytes).
+ograms/MiKTeX/fonts/type1/public/rsfs/rsfs10.pfb><C:/Users/Teodora/AppData/Loca
+l/Programs/MiKTeX/fonts/type1/urw/helvetic/uhvb8a.pfb><C:/Users/Teodora/AppData
+/Local/Programs/MiKTeX/fonts/type1/urw/helvetic/uhvr8a.pfb><C:/Users/Teodora/Ap
+pData/Local/Programs/MiKTeX/fonts/type1/urw/symbol/usyr.pfb><C:/Users/Teodora/A
+ppData/Local/Programs/MiKTeX/fonts/type1/urw/symbol/usyr.pfb><C:/Users/Teodora/
+AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmr8a.pfb><C:/Users/Teodor
+a/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmri8a.pfb>
+Output written on report.pdf (1 page, 106984 bytes).
 PDF statistics:
- 105 PDF objects out of 1000 (max. 8388607)
- 7 named destinations out of 1000 (max. 500000)
- 69146 words of extra memory for PDF output out of 74296 (max. 10000000)
+ 109 PDF objects out of 1000 (max. 8388607)
+ 9 named destinations out of 1000 (max. 500000)
+ 63050 words of extra memory for PDF output out of 74296 (max. 10000000)
 
