@@ -1,4 +1,3 @@
-import random
 import unittest
 import numpy as np
 from solution import MultinomialLogReg, OrdinalLogReg
@@ -32,7 +31,6 @@ class HW2Tests(unittest.TestCase):
         self.assertTrue((prob <= 1).all())
         self.assertTrue((prob >= 0).all())
         np.testing.assert_almost_equal(prob.sum(axis=1), 1)
-
 
 if __name__ == "__main__":
     unittest.main()
