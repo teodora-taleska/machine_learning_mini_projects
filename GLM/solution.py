@@ -132,6 +132,7 @@ class MultinomialLogReg:
         # numeric gradient check
         beta_test = np.random.randn((m - 1) * k + (m - 1))
         grad_error = check_grad(
+            # check grad computes the numerical gradient and compares it to the analytical gradient
             lambda b: -self._log_likelihood(b, X, y),
             lambda b: -self._gradient(b, X, y),
             beta_test,
