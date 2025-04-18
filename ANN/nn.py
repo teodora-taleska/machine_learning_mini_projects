@@ -8,6 +8,17 @@ def sigmoid(x):
 def sigmoid_grad(sig_x):
     return sig_x * (1 - sig_x)
 
+def relu(x):
+    return np.maximum(0, x)
+
+def relu_grad(x):
+    return (x > 0).astype(float)
+
+ACTIVATIONS = {
+    'sigmoid': (sigmoid, sigmoid_grad),
+    'relu': (relu, relu_grad)
+}
+
 def softmax(x):
     e_x = np.exp(x - np.max(x, axis=1, keepdims=True))
     return e_x / np.sum(e_x, axis=1, keepdims=True)
