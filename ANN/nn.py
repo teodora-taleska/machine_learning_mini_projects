@@ -1,11 +1,42 @@
 import numpy as np
 import csv
+from abc import ABC, abstractmethod
 from sklearn.neural_network import MLPRegressor, MLPClassifier
 from sklearn.metrics import mean_squared_error, accuracy_score
 from sklearn.model_selection import train_test_split
 
+# TODO: Report
 
-class ANNBase:
+def sigmoid(z):
+    return 1 / (1 + np.exp(-z))
+
+def sigmoid_derivative(a):
+    return a * (1 - a)
+
+def relu(z):
+    return np.maximum(0, z)
+
+def relu_derivative(a):
+    return (a > 0).astype(float)
+
+def apply_activation(z, func_name):
+    if func_name == 'sigmoid':
+        return sigmoid(z)
+    elif func_name == 'relu':
+        return relu(z)
+    else:
+        raise ValueError(f"Unknown activation function '{func_name}'")
+
+def activation_derivative(a, func_name):
+    if func_name == 'sigmoid':
+        return sigmoid_derivative(a)
+    elif func_name == 'relu':
+        return relu_derivative(a)
+    else:
+        raise ValueError(f"Unknown activation function '{func_name}'")
+
+
+class ANNBase(ABC):
     def __init__(self, units=[], lambda_=0., activations=None, initialization='he'):
         """
         Base class for ANN implementations.
@@ -58,72 +89,58 @@ class ANNBase:
         """Add bias term to input matrix."""
         return np.hstack([np.ones((X.shape[0], 1)), X])
 
-    def _sigmoid(self, z):
-        """Sigmoid activation function."""
-        return 1 / (1 + np.exp(-z))
-
-    def _relu(self, z):
-        """ReLU activation function."""
-        return np.maximum(0, z)
-
-    def _apply_activation(self, z, activation):
-        """Apply specified activation function."""
-        if activation == 'sigmoid':
-            return self._sigmoid(z)
-        elif activation == 'relu':
-            return self._relu(z)
-        else:
-            raise ValueError(f"Unknown activation function: {activation}")
-
     def _forward_pass(self, X):
-        """Perform forward pass through the network."""
         activations = [self._add_bias(X)]
         zs = []
 
         for i, w in enumerate(self.weights_[:-1]):
             z = activations[-1] @ w
             zs.append(z)
-            a = self._apply_activation(z, self.activations[i])
-            activations.append(self._add_bias(a))
+            a = apply_activation(z, self.activations[i])
+            activations.append(self._add_bias(a))  # Add bias for next layer
 
-        # Output layer (no activation added yet)
         z = activations[-1] @ self.weights_[-1]
         zs.append(z)
 
         return activations, zs
 
-    def _compute_cost(self, y, output_activation, activations):
-        """Compute the cost function."""
-        raise NotImplementedError("Should be implemented in subclass")
+    def _backpropagate_helper(self, delta, l, activations):
+        """Generic backpropagation step for hidden layers."""
+        a = activations[l + 1][:, 1:]  # remove bias from activation
+        d_act = activation_derivative(a, self.activations[l])
+        return (delta @ self.weights_[l + 1][1:].T) * d_act
 
+    @abstractmethod
     def _backward_pass(self, y, activations, zs):
-        """Perform backward pass through the network."""
-        raise NotImplementedError("Should be implemented in subclass")
+        pass
 
-    def fit(self, X, y, learning_rate=0.1, epochs=10000, verbose=False):
-        """Train the neural network."""
-        raise NotImplementedError("Should be implemented in subclass")
+    @abstractmethod
+    def fit(self, X, y, learning_rate=0.1, epochs=100000, verbose=False):
+        pass
 
+    @abstractmethod
     def predict(self, X):
-        """Make predictions."""
-        raise NotImplementedError("Should be implemented in subclass")
+        pass
+
+    @abstractmethod
+    def _compute_cost(self, y, output_activation, activations):
+        pass
 
     def weights(self):
         """Return the learned weights."""
         return self.weights_
 
-    def gradient_check(self, X, y, epsilon=1e-7):
+    def gradient_check(self, X, y, epsilon=1e-5):
         """Verify gradients using numerical approximation."""
-        # Flatten all parameters
         original_weights = [w.copy() for w in self.weights_]
         flat_weights = np.concatenate([w.flatten() for w in original_weights])
 
-        # Compute analytical gradient
+        # compute analytical gradient
         activations, zs = self._forward_pass(X)
         grads = self._backward_pass(y, activations, zs)
         flat_grad = np.concatenate([g.flatten() for g in grads])
 
-        # Compute numerical gradient
+        # compute numerical gradient
         num_grad = np.zeros_like(flat_weights)
 
         for i in range(len(flat_weights)):
@@ -131,7 +148,6 @@ class ANNBase:
             theta_plus = [w.copy() for w in original_weights]
             theta_minus = [w.copy() for w in original_weights]
 
-            # Find which weight matrix this parameter belongs to
             pos = i
             for mat_idx in range(len(theta_plus)):
                 size = theta_plus[mat_idx].size
@@ -165,10 +181,10 @@ class ANNBase:
             # Restore original weights
             self.weights_ = [w.copy() for w in original_weights]
 
-        # Compare gradients
         numerator = np.linalg.norm(flat_grad - num_grad)
         denominator = np.linalg.norm(flat_grad) + np.linalg.norm(num_grad)
         difference = numerator / denominator
+        print(f"{difference:.10f}")
 
         return difference < 1e-7, difference
 
@@ -178,18 +194,17 @@ class ANNClassification(ANNBase):
 
     def _softmax(self, z):
         """Softmax activation function for output layer."""
-        exp_z = np.exp(z - np.max(z, axis=1, keepdims=True))
-        return exp_z / np.sum(exp_z, axis=1, keepdims=True)
+        exp_z = np.exp(z - np.max(z, axis=1, keepdims=True)) # max val in each row of z for numerical stability
+        return exp_z / np.sum(exp_z, axis=1, keepdims=True) # normalize to sum to 1
 
     def _compute_cost(self, y, output_activation, activations):
         """Compute the cost function for classification."""
         m = y.shape[0]
         y_one_hot = np.eye(self.n_outputs_)[y]
 
-        # Cross-entropy loss
-        cost = -np.sum(y_one_hot * np.log(output_activation + 1e-15)) / m
+        cost = -np.sum(y_one_hot * np.log(output_activation + 1e-15)) / m # cross-entropy loss
 
-        # Add regularization (excluding bias terms)
+        # l2 regularization
         reg_cost = 0
         for w in self.weights_:
             reg_cost += np.sum(w[1:] ** 2)  # exclude bias weights
@@ -201,44 +216,30 @@ class ANNClassification(ANNBase):
         """Backpropagation for classification."""
         m = y.shape[0]
         y_one_hot = np.eye(self.n_outputs_)[y]
+        grads = [np.zeros_like(w) for w in self.weights_] # empty list to store the gradients for each layer’s weight matrix
 
-        # Initialize gradients
-        grads = [np.zeros_like(w) for w in self.weights_]
-
-        # Output layer error
-        output_activation = self._softmax(zs[-1])
+        output_activation = self._softmax(zs[-1])  # output layer error
         delta = (output_activation - y_one_hot) / m
-
-        # Store gradient for output layer
         grads[-1] = activations[-1].T @ delta
 
-        # Backpropagate through hidden layers
         for l in range(len(self.weights_) - 2, -1, -1):
-            # Remove bias from activation
-            a = activations[l + 1][:, 1:]
-
-            if self.activations[l] == 'sigmoid':
-                delta = (delta @ self.weights_[l + 1][1:].T) * a * (1 - a)
-            elif self.activations[l] == 'relu':
-                delta = (delta @ self.weights_[l + 1][1:].T) * (a > 0)
-
+            delta = self._backpropagate_helper(delta, l, activations)
             grads[l] = activations[l].T @ delta
 
-        # Add regularization (excluding bias terms)
-        for i, w in enumerate(self.weights_):
-            grads[i][1:] += (self.lambda_ / m) * w[1:]
+        # L2 regularization gradient
+        for i in range(len(self.weights_)):
+            grads[i][1:] += (self.lambda_ / m) * self.weights_[i][1:]
 
         return grads
 
-    def fit(self, X, y, learning_rate=0.1, epochs=10000, verbose=False):
+    def fit(self, X, y, learning_rate=0.1, epochs=100000, verbose=False):
         """Train the classification network."""
-        # Determine number of outputs
         self.n_outputs_ = len(np.unique(y))
 
-        # Initialize weights
         self.weights_ = self._initialize_weights(X.shape[1], self.n_outputs_)
 
         for epoch in range(epochs):
+
             # Forward pass
             activations, zs = self._forward_pass(X)
             output_activation = self._softmax(zs[-1])
@@ -271,10 +272,10 @@ class ANNRegression(ANNBase):
         """Compute the cost function for regression."""
         m = y.shape[0]
 
-        # Mean squared error
+        # MSE
         cost = np.sum((output_activation.flatten() - y) ** 2) / (2 * m)
 
-        # Add regularization (excluding bias terms)
+        # l2 reg
         reg_cost = 0
         for w in self.weights_:
             reg_cost += np.sum(w[1:] ** 2)  # exclude bias weights
@@ -283,43 +284,28 @@ class ANNRegression(ANNBase):
         return cost + reg_cost
 
     def _backward_pass(self, y, activations, zs):
-        """Backpropagation for regression."""
         m = y.shape[0]
-
-        # Initialize gradients
         grads = [np.zeros_like(w) for w in self.weights_]
 
-        # Output layer error
         output_activation = zs[-1].flatten()
         delta = (output_activation - y).reshape(-1, 1) / m
-
-        # Store gradient for output layer
         grads[-1] = activations[-1].T @ delta
 
-        # Backpropagate through hidden layers
         for l in range(len(self.weights_) - 2, -1, -1):
-            # Remove bias from activation
-            a = activations[l + 1][:, 1:]
-
-            if self.activations[l] == 'sigmoid':
-                delta = (delta @ self.weights_[l + 1][1:].T) * a * (1 - a)
-            elif self.activations[l] == 'relu':
-                delta = (delta @ self.weights_[l + 1][1:].T) * (a > 0)
-
+            delta = self._backpropagate_helper(delta, l, activations)
             grads[l] = activations[l].T @ delta
 
-        # Add regularization (excluding bias terms)
-        for i, w in enumerate(self.weights_):
-            grads[i][1:] += (self.lambda_ / m) * w[1:]
+        # add regularization
+        for i in range(len(self.weights_)):
+            grads[i][1:] += (self.lambda_ / m) * self.weights_[i][1:]
 
         return grads
 
-    def fit(self, X, y, learning_rate=0.1, epochs=10000, verbose=False):
+    def fit(self, X, y, learning_rate=0.1, epochs=100000, verbose=False):
         """Train the regression network."""
         # For regression, we have 1 output
         self.n_outputs_ = 1
 
-        # Initialize weights
         self.weights_ = self._initialize_weights(X.shape[1], self.n_outputs_)
 
         for epoch in range(epochs):
@@ -364,6 +350,91 @@ def squares():
     legend, X, y = read_tab("squares.tab", {"C1": 0, "C2": 1})
     return X, y
 
+
+def fit_data(X, y, model, test_size=0.3, random_state=42, cost_fn=None):
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=test_size, random_state=random_state
+    )
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
+    cost = cost_fn(y_test, y_pred) if cost_fn else None
+    return y_pred, y_test, cost
+
+
+def classification_comparison_test(data):
+    print("Comparing custom ANN classification with sklearn MLPClassifier...")
+    X, y = data
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+    clf_custom = ANNClassification(units=[10, 10], lambda_=0.01, activations=["relu", "relu"])
+    model_custom = clf_custom.fit(X_train, y_train)
+    probs_custom = model_custom.predict(X_test)
+    preds_custom = np.argmax(probs_custom, axis=1)
+
+    clf_sklearn = MLPClassifier(hidden_layer_sizes=(10, 10), activation='relu',
+                                 alpha=0.01, max_iter=3000, random_state=42)
+    clf_sklearn.fit(X_train, y_train)
+    preds_sklearn = clf_sklearn.predict(X_test)
+
+    acc_custom = accuracy_score(y_test, preds_custom)
+    acc_sklearn = accuracy_score(y_test, preds_sklearn)
+    agreement = np.mean(preds_custom == preds_sklearn) * 100 # percentage of agreement
+
+    print(f"Custom ANN Accuracy: {acc_custom:.4f}")
+    print(f"Sklearn MLP Accuracy: {acc_sklearn:.4f}")
+    print(f"Prediction Agreement: {agreement:.2f}%")
+
+
+    if agreement > 90:
+        print("✅ PASS: Predictions are sufficiently aligned.")
+    else:
+        print("❌ FAIL: Predictions diverge significantly.")
+
+
+
+def regression_comparison_test(data):
+    print("Comparing custom ANN regression with sklearn MLPRegressor...")
+    X, y = data
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+    my_ann = ANNRegression(units=[10, 10], lambda_=0.01, activations=["relu", "relu"])
+    my_ann.fit(X_train, y_train)
+    y_pred_custom = my_ann.predict(X_test)
+
+    sk_ann = MLPRegressor(hidden_layer_sizes=(10, 10), activation='relu', alpha=0.01,
+                          max_iter=3000, random_state=42)
+    sk_ann.fit(X_train, y_train)
+    y_pred_sklearn = sk_ann.predict(X_test)
+
+    mse_custom = mean_squared_error(y_test, y_pred_custom)
+    mse_sklearn = mean_squared_error(y_test, y_pred_sklearn)
+
+    print("Custom ANN MSE:", mse_custom)
+    print("Sklearn ANN MSE:", mse_sklearn)
+
+    abs_diff = np.abs(y_pred_custom - y_pred_sklearn)
+    mae = np.mean(abs_diff)
+    max_diff = np.max(abs_diff)
+    within_threshold = np.mean(abs_diff < 1.0) * 100 # 1.0 unit tolerance
+
+    print("Mean Absolute Difference:", mae)
+    print("Max Absolute Difference:", max_diff)
+    print(f"Predictions within 1.0 of each other: {within_threshold:.2f}%")
+
+    # Pass/Fail Criteria
+    mse_close = np.abs(mse_custom - mse_sklearn) < 5
+    similarity_ok = within_threshold > 90
+    print("MSE close:", mse_close)
+    print("Similarity OK:", similarity_ok)
+
+    print("\nTEST RESULT:")
+    if mse_close and similarity_ok:
+        print("✅ PASS: Custom ANN behaves similarly to sklearn MLPRegressor.")
+    else:
+        print("❌ FAIL: Custom ANN differs too much from sklearn.")
+
+
 # Main block
 if __name__ == "__main__":
     fitter = ANNClassification(units=[3, 4], lambda_=0)
@@ -371,59 +442,29 @@ if __name__ == "__main__":
     y = np.array([0, 1, 2])
     model = fitter.fit(X, y)
     predictions = model.predict(X)
-    print(predictions)
-    # np.testing.assert_almost_equal(predictions,
-    #                                [[1, 0, 0],
-    #                                 [0, 1, 0],
-    #                                 [0, 0, 1]], decimal=3)
-    np.testing.assert_allclose(predictions,
-                               [[1, 0, 0],
-                                [0, 1, 0],
-                                [0, 0, 1]],
-                               atol=0.01)  # Allow ±0.01 differences
+    np.testing.assert_almost_equal(predictions,
+                                   [[1, 0, 0],
+                                    [0, 1, 0],
+                                    [0, 0, 1]], decimal=3)
 
-    # model._initialize_weights(X.shape[1], len(np.unique(y)))
-    is_correct, difference = model.gradient_check(X, y)
-    print(f"Gradients correct: {is_correct}, difference: {difference}")
+    success, diff = model.gradient_check(X, y)
+    print(f"Gradient check passed: {success}, Difference: {diff}")
 
-    #
-    # # Example usage of sklearn for comparison
-    # X_squares, y_squares = squares()
-    # X_doughnut, y_doughnut = doughnut()
-    #
-    # X_train_sq, X_test_sq, y_train_sq, y_test_sq = train_test_split(X_squares, y_squares, test_size=0.3, random_state=42)
-    # X_train_dg, X_test_dg, y_train_dg, y_test_dg = train_test_split(X_doughnut, y_doughnut, test_size=0.3, random_state=42)
-    #
-    # print("Training on squares.tab:")
-    # my_ann_sq = ANNRegression(units=[10, 10], lambda_=0.01, activations=["relu", "relu"])
-    # model_sq = my_ann_sq.fit(X_train_sq, y_train_sq, max_iter=3000, lr=0.01)
-    # y_pred_sq = model_sq.predict(X_test_sq)
-    # print("Custom ANN MSE (squares):", mean_squared_error(y_test_sq, y_pred_sq))
-    #
-    # sk_ann_sq = MLPRegressor(hidden_layer_sizes=(10, 10), activation='relu', alpha=0.01, max_iter=3000, random_state=42)
-    # sk_ann_sq.fit(X_train_sq, y_train_sq)
-    # print("Scikit-learn MSE (squares):", mean_squared_error(y_test_sq, sk_ann_sq.predict(X_test_sq)))
-    #
-    # print("\nTraining on doughnut.tab:")
-    # my_ann_dg = ANNRegression(units=[10, 10], lambda_=0.01, activations=["relu", "relu"])
-    # model_dg = my_ann_dg.fit(X_train_dg, y_train_dg, max_iter=3000, lr=0.01)
-    # y_pred_dg = model_dg.predict(X_test_dg)
-    # print("Custom ANN MSE (doughnut):", mean_squared_error(y_test_dg, y_pred_dg))
-    #
-    # sk_ann_dg = MLPRegressor(hidden_layer_sizes=(10, 10), activation='relu', alpha=0.01, max_iter=3000, random_state=42)
-    # sk_ann_dg.fit(X_train_dg, y_train_dg)
-    # print("Scikit-learn MSE (doughnut):", mean_squared_error(y_test_dg, sk_ann_dg.predict(X_test_dg)))
-    #
-    # print("\nClassification Test:")
-    # X, y = squares()
-    # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
-    #
-    # clf = ANNClassification(units=[8, 8], lambda_=0.01, activations=["relu", "relu"])
-    # model = clf.fit(X_train, y_train, max_iter=3000, lr=0.01)
-    # pred = model.predict(X_test)
-    # acc = accuracy_score(y_test, np.argmax(pred, axis=1))
-    # print("Custom ANN Accuracy (squares):", acc)
-    #
-    # sk_clf = MLPClassifier(hidden_layer_sizes=(8, 8), activation='relu', alpha=0.01, max_iter=3000, random_state=42)
-    # sk_clf.fit(X_train, y_train)
-    # print("Scikit-learn Accuracy (squares):", accuracy_score(y_test, sk_clf.predict(X_test)))
+    X_squares, y_squares = squares()
+    X_doughnut, y_doughnut = doughnut()
+
+    # fit the model on squares.tab
+    reg_model = ANNRegression(units=[10, 10], lambda_=0.01, activations=["relu", "relu"])
+    y_pred_squares, y_test_squares, cost_sq = fit_data(X_squares, y_squares, reg_model, test_size=0.3, random_state=42, cost_fn=mean_squared_error)
+    print("Training on squares.tab (MSE):", cost_sq)
+
+    # fit the model on doughnut.tab
+    clas_model = ANNClassification(units=[10, 10], lambda_=0.01, activations=["relu", "relu"])
+    y_pred_doughnut, y_test_doughnut, cost_dn = fit_data(X_doughnut, y_doughnut, clas_model, test_size=0.3, random_state=42, cost_fn=accuracy_score)
+    print("Training on doughnut.tab (accuracy):", cost_dn)
+
+    # Compare with sklearn
+    classification_comparison_test(doughnut())
+    regression_comparison_test(doughnut())
+
+
