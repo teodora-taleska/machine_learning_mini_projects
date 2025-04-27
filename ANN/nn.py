@@ -5,8 +5,6 @@ from sklearn.neural_network import MLPRegressor, MLPClassifier
 from sklearn.metrics import mean_squared_error, accuracy_score
 from sklearn.model_selection import train_test_split
 
-# TODO: Report
-
 def sigmoid(z):
     return 1 / (1 + np.exp(-z))
 
@@ -178,8 +176,7 @@ class ANNBase(ABC):
 
             num_grad[i] = (cost_plus - cost_minus) / (2 * epsilon)
 
-            # Restore original weights
-            self.weights_ = [w.copy() for w in original_weights]
+            self.weights_ = [w.copy() for w in original_weights] # restore original weights
 
         numerator = np.linalg.norm(flat_grad - num_grad)
         denominator = np.linalg.norm(flat_grad) + np.linalg.norm(num_grad)
@@ -244,7 +241,6 @@ class ANNClassification(ANNBase):
             activations, zs = self._forward_pass(X)
             output_activation = self._softmax(zs[-1])
 
-            # Compute cost
             cost = self._compute_cost(y, output_activation, activations)
 
             if verbose and epoch % 1000 == 0:
@@ -272,7 +268,6 @@ class ANNRegression(ANNBase):
         """Compute the cost function for regression."""
         m = y.shape[0]
 
-        # MSE
         cost = np.sum((output_activation.flatten() - y) ** 2) / (2 * m)
 
         # l2 reg
@@ -313,7 +308,6 @@ class ANNRegression(ANNBase):
             activations, zs = self._forward_pass(X)
             output_activation = zs[-1].flatten()
 
-            # Compute cost
             cost = self._compute_cost(y, output_activation, activations)
 
             if verbose and epoch % 1000 == 0:
@@ -352,13 +346,21 @@ def squares():
 
 
 def fit_data(X, y, model, test_size=0.3, random_state=42, cost_fn=None):
-
+    print("target variable: ", np.unique(y, return_counts=True))
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=test_size, random_state=random_state
     )
     model.fit(X_train, y_train)
     y_pred = model.predict(X_test)
-    cost = cost_fn(y_test, y_pred) if cost_fn else None
+    y_pred_labels = y_pred
+    if cost_fn == accuracy_score:
+        # convert to class labels to compute accuracy
+        if y_pred.ndim > 1 and y_pred.shape[1] > 1:
+            y_pred_labels = np.argmax(y_pred, axis=1)
+        else:
+            y_pred_labels = y_pred
+    cost = cost_fn(y_test, y_pred_labels)
+
     return y_pred, y_test, cost
 
 
@@ -416,11 +418,11 @@ def regression_comparison_test(data):
     abs_diff = np.abs(y_pred_custom - y_pred_sklearn)
     mae = np.mean(abs_diff)
     max_diff = np.max(abs_diff)
-    within_threshold = np.mean(abs_diff < 1.0) * 100 # 1.0 unit tolerance
+    within_threshold = np.mean(abs_diff < 0.6) * 100
 
     print("Mean Absolute Difference:", mae)
     print("Max Absolute Difference:", max_diff)
-    print(f"Predictions within 1.0 of each other: {within_threshold:.2f}%")
+    print(f"Predictions within 0.6 of each other: {within_threshold:.2f}%")
 
     # Pass/Fail Criteria
     mse_close = np.abs(mse_custom - mse_sklearn) < 5
