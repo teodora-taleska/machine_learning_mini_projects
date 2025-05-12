@@ -106,6 +106,71 @@ class KernelizedRidgeRegression:
         K_test = self.kernel(X, self.X_train)
         return K_test @ self.alpha
 
+class SVR:
+    def __init__(self, kernel, lambda_, epsilon):
+        self.kernel = kernel
+        self.lambda_ = lambda_
+        self.epsilon = epsilon
+        self.b = None
+
+    def fit(self, X, y):
+        n = X.shape[0]
+        K = np.asarray(self.kernel(X, X))
+        C = 1 / self.lambda_
+
+        P = np.zeros((2 * n, 2 * n))
+        for i in range(n):
+            for j in range(n):
+                kij = K[i, j]
+                # interleaved: P[2i, 2j] = K, P[2i+1, 2j+1] = K, P[2i, 2j+1] = -K, ...
+                P[2 * i, 2 * j] = kij           # α_i * α_j
+                P[2 * i + 1, 2 * j + 1] = kij   # α*_i * α*_j
+                P[2 * i, 2 * j + 1] = -kij      # α_i * α*_j
+                P[2 * i + 1, 2 * j] = -kij      # α*_i * α_j
+        P = matrix(P)
+
+        q = np.zeros(2 * n)
+        for i in range(n):
+            q[2 * i]     = self.epsilon - y[i]  # for α_i
+            q[2 * i + 1] = self.epsilon + y[i]  # for α*_i
+        q = matrix(q)
+
+        G = np.vstack([-np.eye(2 * n), np.eye(2 * n)])
+        h = np.hstack([np.zeros(2 * n), np.ones(2 * n) * C])
+        G, h = matrix(G), matrix(h)
+
+        # Constraints: α_i + α*_i = 0
+        A = np.zeros((1, 2 * n))
+        for i in range(n):
+            A[0, 2 * i] = 1       # α_i
+            A[0, 2 * i + 1] = -1  # α*_i
+        A = matrix(A)
+        b = matrix(np.array([0.0]))
+
+        sol = solvers.qp(P, q, G, h, A, b)
+        dual_vars = np.array(sol['x']).flatten()
+        self.b = sol['y'][0]
+
+        self.alpha = dual_vars[0::2]      # even indices
+        self.alpha_star = dual_vars[1::2] # odd indices
+        self.X = X
+        self.y = y
+        self.K = K
+        return self
+
+    def predict(self, Xtest):
+        kernel_output = self.kernel(Xtest, self.X)
+        coeff = self.alpha - self.alpha_star
+        return (kernel_output @ coeff + self.get_b()).flatten() # (1, n) instead of (n,)
+
+    def get_alpha(self):
+        interleaved = np.empty(2 * len(self.alpha))
+        interleaved[0::2] = self.alpha
+        interleaved[1::2] = self.alpha_star
+        return interleaved.reshape(-1, 2)  # rows: [α_i, α*_i]
+
+    def get_b(self):
+        return self.b
 
 
 # if __name__ == "__main__":
