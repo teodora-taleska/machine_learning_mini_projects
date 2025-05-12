@@ -2,7 +2,7 @@ import numpy as np
 from cvxopt import matrix, solvers
 import matplotlib.pyplot as plt
 import pandas as pd
-
+from sklearn.preprocessing import StandardScaler
 
 class RBF:
     """
@@ -173,5 +173,56 @@ class SVR:
         return self.b
 
 
-# if __name__ == "__main__":
-#     plot_sine_regression_demo()
+def plot_sine_regression_demo():
+    df = pd.read_csv("sine.csv")
+    X = df["x"].values.reshape(-1, 1)
+    y = df["y"].values
+
+    rbf_kernel = RBF(sigma=1.0)
+    poly_kernel = Polynomial(M=5)
+
+    X_grid = np.linspace(min(X.ravel()) - 1, max(X.ravel()) + 1, 500).reshape(-1, 1)
+
+    models = {
+        "KRR with RBF": {
+            "model": KernelizedRidgeRegression(kernel=rbf_kernel, lambda_=0.1),
+        },
+        "KRR with Polynomial": {
+            "model": KernelizedRidgeRegression(kernel=poly_kernel, lambda_=0.5),
+        },
+        "SVR with RBF": {
+            "model": SVR(kernel=rbf_kernel, lambda_=0.01, epsilon=0.1),
+        },
+        "SVR with Polynomial": {
+            "model": SVR(kernel=poly_kernel, lambda_=0.5, epsilon=0.3),
+        }
+    }
+
+    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+    axes = axes.ravel()
+
+    for i, (title, entry) in enumerate(models.items()):
+        model = entry["model"]
+        X_used = X
+        X_grid_used = X_grid
+
+        model.fit(X_used, y)
+        y_pred = model.predict(X_grid_used)
+
+        axes[i].scatter(X_used, y, color="black", label="Data")
+        axes[i].plot(X_grid_used, y_pred, color="blue", label="Prediction")
+
+        if isinstance(model, SVR):
+            alpha_combined = model.get_alpha()
+            support_indices = np.where(np.abs(alpha_combined).sum(axis=1) > 1e-5)[0]
+            axes[i].scatter(X_used[support_indices], y[support_indices], facecolors='none', edgecolors='red', label="Support Vectors", s=80)
+
+        axes[i].set_title(title)
+        axes[i].legend()
+        axes[i].grid(True)
+
+    plt.tight_layout()
+    plt.show()
+
+if __name__ == "__main__":
+    plot_sine_regression_demo()
