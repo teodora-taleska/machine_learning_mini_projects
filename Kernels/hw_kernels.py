@@ -3,7 +3,12 @@ from cvxopt import matrix, solvers
 import matplotlib.pyplot as plt
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error
+from sklearn.model_selection import KFold
 
+
+# Part 1
 class RBF:
     """
     Radial Basis Function (Gaussian) kernel implementation.
@@ -46,14 +51,12 @@ class Polynomial:
 
     ```
         The polynomial kernel is defined as:
-        K(x, y) = (x^T y + c)^d
-
-        In our implementation:
-        - M parameter corresponds to the degree d
-        - We use c = 1 as a default offset
+        K(x, y) = (x^T gamma + c)^d
     """
-    def __init__(self, M=2):
+    def __init__(self, M=2, gamma=1.0, c=1.0):
         self.M = M
+        self.gamma = gamma
+        self.c = c
 
     def __call__(self, A, B):
         A_2d = np.atleast_2d(A)
@@ -61,8 +64,7 @@ class Polynomial:
 
         dot_product = np.dot(A_2d, B_2d.T)
 
-        # apply the kernel
-        result = (dot_product + 1) ** self.M
+        result = (self.gamma * dot_product + self.c) ** self.M
 
         if A.ndim == 1 and B.ndim == 1:
             return result[0, 0]
@@ -112,6 +114,8 @@ class SVR:
         self.lambda_ = lambda_
         self.epsilon = epsilon
         self.b = None
+        self.alpha = None
+        self.alpha_star = None
 
     def fit(self, X, y):
         n = X.shape[0]
@@ -178,23 +182,35 @@ def plot_sine_regression_demo():
     X = df["x"].values.reshape(-1, 1)
     y = df["y"].values
 
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+
     rbf_kernel = RBF(sigma=1.0)
-    poly_kernel = Polynomial(M=5)
+    poly_kernel = Polynomial(M=5, gamma=0.5, c=2.0)
 
     X_grid = np.linspace(min(X.ravel()) - 1, max(X.ravel()) + 1, 500).reshape(-1, 1)
+    X_grid_scaled = scaler.transform(X_grid)
 
     models = {
         "KRR with RBF": {
             "model": KernelizedRidgeRegression(kernel=rbf_kernel, lambda_=0.1),
+            "X_grid": X_grid,
+            "X_used": X
         },
         "KRR with Polynomial": {
-            "model": KernelizedRidgeRegression(kernel=poly_kernel, lambda_=0.5),
+            "model": KernelizedRidgeRegression(kernel=poly_kernel, lambda_=0.001),
+            "X_grid": X_grid_scaled,
+            "X_used": X_scaled
         },
         "SVR with RBF": {
-            "model": SVR(kernel=rbf_kernel, lambda_=0.01, epsilon=0.1),
+            "model": SVR(kernel=rbf_kernel, lambda_=0.1, epsilon=0.1),
+            "X_grid": X_grid,
+            "X_used": X
         },
         "SVR with Polynomial": {
-            "model": SVR(kernel=poly_kernel, lambda_=0.5, epsilon=0.3),
+            "model": SVR(kernel=poly_kernel, lambda_=0.001, epsilon=0.1),
+            "X_grid": X_grid_scaled,
+            "X_used": X_scaled
         }
     }
 
@@ -203,8 +219,8 @@ def plot_sine_regression_demo():
 
     for i, (title, entry) in enumerate(models.items()):
         model = entry["model"]
-        X_used = X
-        X_grid_used = X_grid
+        X_used = entry["X_used"]
+        X_grid_used = entry["X_grid"]
 
         model.fit(X_used, y)
         y_pred = model.predict(X_grid_used)
@@ -221,8 +237,200 @@ def plot_sine_regression_demo():
         axes[i].legend()
         axes[i].grid(True)
 
-    plt.tight_layout()
+    fig.subplots_adjust(hspace=0.2, wspace=0.2)
+    plt.savefig("visualizations/sine_plot.png")
+    plt.show()
+
+
+# Part 2
+def load_housing_data():
+    df = pd.read_csv('housing2r.csv')
+    X = df.drop(columns=['y']).values
+    y = df['y'].values
+    return X, y
+
+
+def nested_cv_with_plots(model_class, kernel_class, X, y, outer_cv=5, inner_cv=5,
+                         param_grid={}, model_name='', kernel_name='', plot_xlabel=''):
+
+    epsilon = 0.001 if model_name == 'SVR' else None
+    kernel_params = param_grid['kernel_param']
+    lambdas = param_grid['lambda']
+    support_vectors_lambda_1 = []
+    support_vectors_best_lambda = []
+
+    mse_lambda_1 = []
+    mse_best_lambda = []
+    best_lambdas_per_kernel = []
+
+    for kernel_param in kernel_params:
+        # --- 1. Train with lambda = 1 ---
+        if model_name == 'SVR':
+            model_fixed = model_class(kernel=kernel_class(kernel_param), lambda_=1.0, epsilon=epsilon)
+        else:
+            model_fixed = model_class(kernel=kernel_class(kernel_param), lambda_=1.0)
+
+        outer_mse_fixed = []
+
+        outer_kf = KFold(n_splits=outer_cv, shuffle=True, random_state=42)
+
+        for train_idx, test_idx in outer_kf.split(X):
+            X_train, X_test = X[train_idx], X[test_idx]
+            y_train, y_test = y[train_idx], y[test_idx]
+
+            model_fixed.fit(X_train, y_train)
+            y_pred = model_fixed.predict(X_test)
+            outer_mse_fixed.append(mean_squared_error(y_test, y_pred))
+        if model_name == 'SVR':
+            support_vectors_lambda_1.append(len(model_fixed.get_alpha()))
+        mse_lambda_1.append(np.mean(outer_mse_fixed))
+
+        # --- 2. Grid search to find best lambda ---
+        best_inner_mse = np.inf
+        best_lambda = None
+
+        for lam in lambdas:
+            if model_name == 'SVR':
+                model_cv = model_class(kernel=kernel_class(kernel_param), lambda_=lam, epsilon=epsilon)
+            else:
+                model_cv = model_class(kernel=kernel_class(kernel_param), lambda_=lam)
+
+            inner_mses = []
+            inner_kf = KFold(n_splits=inner_cv, shuffle=True, random_state=42)
+            for inner_train_idx, inner_val_idx in inner_kf.split(X):
+                X_train_inner, X_val_inner = X[inner_train_idx], X[inner_val_idx]
+                y_train_inner, y_val_inner = y[inner_train_idx], y[inner_val_idx]
+
+                model_cv.fit(X_train_inner, y_train_inner)
+                y_pred = model_cv.predict(X_val_inner)
+                inner_mses.append(mean_squared_error(y_val_inner, y_pred))
+
+            avg_inner_mse = np.mean(inner_mses)
+            if avg_inner_mse < best_inner_mse:
+                best_inner_mse = avg_inner_mse
+                best_lambda = lam
+
+        best_lambdas_per_kernel.append(best_lambda)
+
+        # --- 3. Evaluate best lambda on outer folds ---
+        if model_name == 'SVR':
+            model_best = model_class(kernel=kernel_class(kernel_param), lambda_=best_lambda, epsilon=epsilon)
+        else:
+            model_best = model_class(kernel=kernel_class(kernel_param), lambda_=best_lambda)
+
+        outer_mse_best = []
+
+        for train_idx, test_idx in outer_kf.split(X):
+            X_train, X_test = X[train_idx], X[test_idx]
+            y_train, y_test = y[train_idx], y[test_idx]
+
+            model_best.fit(X_train, y_train)
+            y_pred = model_best.predict(X_test)
+            outer_mse_best.append(mean_squared_error(y_test, y_pred))
+        if model_name == 'SVR':
+            support_vectors_best_lambda.append(len(model_best.get_alpha()))
+        mse_best_lambda.append(np.mean(outer_mse_best))
+
+    return {
+        'kernel_params': kernel_params,
+        'mse_lambda_1': mse_lambda_1,
+        'mse_best_lambda': mse_best_lambda,
+        'best_lambdas_per_kernel': best_lambdas_per_kernel,
+        'support_vectors_lambda_1': support_vectors_lambda_1,
+        'support_vectors_best_lambda': support_vectors_best_lambda
+    }
+
+
+def analyze_housing_data():
+    lambda_values = [0.001, 0.01, 0.1, 0.5, 1.0]
+    sigma_values = [0.1, 0.5, 1.0, 2.0, 3.0, 5.0]
+    degree_values = [6, 7, 8, 9, 10]
+
+    param_grid_rbf = {'kernel_param': sigma_values, 'lambda': lambda_values}
+    param_grid_poly = {'kernel_param': degree_values, 'lambda': lambda_values}
+
+    X, y = load_housing_data()
+    scaler = StandardScaler()
+    X = scaler.fit_transform(X)
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
+
+    results_rbf_KRR = nested_cv_with_plots(KernelizedRidgeRegression, lambda s: RBF(sigma=s), X_train, y_train,
+                                            param_grid=param_grid_rbf,
+                                            model_name='KRR', kernel_name='RBF', plot_xlabel='sigma')
+
+    results_poly_KRR = nested_cv_with_plots(KernelizedRidgeRegression, lambda d: Polynomial(M=d), X_train, y_train,
+                                            param_grid=param_grid_poly,
+                                            model_name='KRR', kernel_name='Polynomial', plot_xlabel='degree')
+
+    results_rbf_SVR = nested_cv_with_plots(SVR, lambda s: RBF(sigma=s), X_train, y_train,
+                                           param_grid=param_grid_rbf,
+                                           model_name='SVR', kernel_name='RBF', plot_xlabel='sigma')
+
+    results_poly_SVR = nested_cv_with_plots(SVR, lambda d: Polynomial(M=d), X_train, y_train,
+                                            param_grid=param_grid_poly,
+                                            model_name='SVR', kernel_name='Polynomial', plot_xlabel='degree')
+
+    fig, axes = plt.subplots(2, 2, figsize=(15, 12))
+
+    axes[0, 0].plot(results_rbf_KRR['kernel_params'], results_rbf_KRR['mse_lambda_1'], marker='o', label='KRR RBF λ=1')
+    axes[0, 0].plot(results_rbf_KRR['kernel_params'], results_rbf_KRR['mse_best_lambda'], marker='s',
+                    label=f'KRR RBF best λ = {results_rbf_KRR["best_lambdas_per_kernel"]}')
+    axes[0, 0].set_xlabel('sigma')
+    axes[0, 0].set_ylabel('MSE')
+    axes[0, 0].set_title('KRR with RBF Kernel')
+    axes[0, 0].grid(True)
+    axes[0, 0].legend()
+
+    axes[0, 1].plot(results_poly_KRR['kernel_params'], results_poly_KRR['mse_lambda_1'], marker='o', label='KRR Polynomial λ=1')
+    axes[0, 1].plot(results_poly_KRR['kernel_params'], results_poly_KRR['mse_best_lambda'], marker='s',
+                    label=f'KRR Poly best λ = {results_poly_KRR["best_lambdas_per_kernel"]}')
+    axes[0, 1].set_xlabel('degree')
+    axes[0, 1].set_ylabel('MSE')
+    axes[0, 1].set_title('KRR with Polynomial Kernel')
+    axes[0, 1].grid(True)
+    axes[0, 1].legend()
+
+    axes[1, 0].plot(results_rbf_SVR['kernel_params'], results_rbf_SVR['mse_lambda_1'], marker='o', label='SVR RBF λ=1')
+    axes[1, 0].plot(results_rbf_SVR['kernel_params'], results_rbf_SVR['mse_best_lambda'], marker='s',
+                    label=f'SVR RBF best λ = {results_rbf_SVR["best_lambdas_per_kernel"]}')
+    axes[1, 0].set_xlabel('sigma')
+    axes[1, 0].set_ylabel('MSE')
+    axes[1, 0].set_title('SVR with RBF Kernel')
+    axes[1, 0].grid(True)
+    axes[1, 0].legend()
+
+    axes[1, 1].plot(results_poly_SVR['kernel_params'], results_poly_SVR['mse_lambda_1'], marker='o', label='SVR Polynomial λ=1')
+    axes[1, 1].plot(results_poly_SVR['kernel_params'], results_poly_SVR['mse_best_lambda'], marker='s',
+                    label=f'SVR Poly best λ = {results_poly_SVR["best_lambdas_per_kernel"]}')
+    axes[1, 1].set_xlabel('degree')
+    axes[1, 1].set_ylabel('MSE')
+    axes[1, 1].set_title('SVR with Polynomial Kernel')
+    axes[1, 1].grid(True)
+    axes[1, 1].legend()
+
+    for i, param in enumerate(results_rbf_SVR['kernel_params']):
+        axes[1, 0].annotate(f'{results_rbf_SVR["support_vectors_lambda_1"][i]}',
+                            (param, results_rbf_SVR['mse_lambda_1'][i]),
+                            textcoords="offset points", xytext=(0, 10), ha='center', fontsize=8, color='blue')
+        axes[1, 0].annotate(f'{results_rbf_SVR["support_vectors_best_lambda"][i]}',
+                            (param, results_rbf_SVR['mse_best_lambda'][i]),
+                            textcoords="offset points", xytext=(0, -15), ha='center', fontsize=8, color='green')
+
+    for i, param in enumerate(results_poly_SVR['kernel_params']):
+        axes[1, 1].annotate(f'{results_poly_SVR["support_vectors_lambda_1"][i]}',
+                            (param, results_poly_SVR['mse_lambda_1'][i]),
+                            textcoords="offset points", xytext=(0, 10), ha='center', fontsize=8, color='blue')
+        axes[1, 1].annotate(f'{results_poly_SVR["support_vectors_best_lambda"][i]}',
+                            (param, results_poly_SVR['mse_best_lambda'][i]),
+                            textcoords="offset points", xytext=(0, -15), ha='center', fontsize=8, color='green')
+
+    fig.subplots_adjust(hspace=0.3)
+    plt.savefig('visualizations/compare_KRR_SVR_kernels_individual.png')
     plt.show()
 
 if __name__ == "__main__":
     plot_sine_regression_demo()
+    # analyze_housing_data()
