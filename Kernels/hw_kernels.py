@@ -351,9 +351,9 @@ def load_housing_data():
 
 
 def nested_cv_with_plots(model_class, kernel_class, X, y, outer_cv=5, inner_cv=5,
-                         param_grid={}, model_name='', kernel_name='', plot_xlabel=''):
+                         param_grid={}, model_name=''):
 
-    epsilon = 0.001 if model_name == 'SVR' else None
+    epsilon = 0.5 if model_name == 'SVR' else None
     kernel_params = param_grid['kernel_param']
     lambdas = param_grid['lambda']
     support_vectors_lambda_1 = []
@@ -382,9 +382,8 @@ def nested_cv_with_plots(model_class, kernel_class, X, y, outer_cv=5, inner_cv=5
             outer_mse_fixed.append(mean_squared_error(y[test_idx], y_pred))
 
             if model_name == 'SVR':
-                # Use get_support_vectors() instead of manual counting
                 sv_info = model_fixed.get_support_vectors()
-                sv_counts_fixed.append(len(sv_info['indices']))  # Count SVs
+                sv_counts_fixed.append(len(sv_info['indices']))
 
         mse_lambda_1.append(np.mean(outer_mse_fixed))
         if model_name == 'SVR':
@@ -432,7 +431,6 @@ def nested_cv_with_plots(model_class, kernel_class, X, y, outer_cv=5, inner_cv=5
             outer_mse_best.append(mean_squared_error(y[test_idx], y_pred))
 
             if model_name == 'SVR':
-                # Use get_support_vectors() instead of manual counting
                 sv_info = model_best.get_support_vectors()
                 sv_counts_best.append(len(sv_info['indices']))
 
@@ -452,35 +450,35 @@ def nested_cv_with_plots(model_class, kernel_class, X, y, outer_cv=5, inner_cv=5
 
 def analyze_housing_data():
     lambda_values = [0.001, 0.01, 0.1, 0.5, 1.0]
-    sigma_values = [0.1, 0.5, 1.0, 2.0, 3.0, 5.0]
-    degree_values = [6, 7, 8, 9, 10]
+    sigma_values = [0.5, 1.0, 2.0, 3.0, 5.0]
+    degree_values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
     param_grid_rbf = {'kernel_param': sigma_values, 'lambda': lambda_values}
     param_grid_poly = {'kernel_param': degree_values, 'lambda': lambda_values}
 
     X, y = load_housing_data()
-    scaler = StandardScaler()
-    X = scaler.fit_transform(X)
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    scaler = StandardScaler()
     X_train = scaler.fit_transform(X_train)
     # X_test = scaler.transform(X_test)
 
     results_rbf_KRR = nested_cv_with_plots(KernelizedRidgeRegression, lambda s: RBF(sigma=s), X_train, y_train,
                                             param_grid=param_grid_rbf,
-                                            model_name='KRR', kernel_name='RBF', plot_xlabel='sigma')
+                                            model_name='KRR')
 
     results_poly_KRR = nested_cv_with_plots(KernelizedRidgeRegression, lambda d: Polynomial(M=d), X_train, y_train,
                                             param_grid=param_grid_poly,
-                                            model_name='KRR', kernel_name='Polynomial', plot_xlabel='degree')
+                                            model_name='KRR')
 
     results_rbf_SVR = nested_cv_with_plots(SVR, lambda s: RBF(sigma=s), X_train, y_train,
                                            param_grid=param_grid_rbf,
-                                           model_name='SVR', kernel_name='RBF', plot_xlabel='sigma')
+                                           model_name='SVR')
 
     results_poly_SVR = nested_cv_with_plots(SVR, lambda d: Polynomial(M=d), X_train, y_train,
                                             param_grid=param_grid_poly,
-                                            model_name='SVR', kernel_name='Polynomial', plot_xlabel='degree')
+                                            model_name='SVR')
 
     fig, axes = plt.subplots(2, 2, figsize=(15, 12))
 
@@ -555,5 +553,5 @@ def analyze_housing_data():
 
 if __name__ == "__main__":
     # plot_sine_regression_demo()
-    plot_sine_regression_demo_sklearn()
-    # analyze_housing_data()
+    # plot_sine_regression_demo_sklearn()
+    analyze_housing_data()
