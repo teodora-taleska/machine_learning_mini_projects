@@ -8,7 +8,6 @@ from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.kernel_ridge import KernelRidge
 from sklearn.svm import SVR as sklearn_SVR
-from sklearn.metrics.pairwise import rbf_kernel, polynomial_kernel
 
 # Part 1
 class RBF:
@@ -175,7 +174,7 @@ class SVR:
         y_pred = self.predict(self.X)
         residuals = np.abs(y_pred - self.y)
 
-        # Support vectors are points with non-zero alpha/alpha* AND error >= ε - tol
+        # Support vectors => points with non-zero alpha/alpha* AND error >= ε - tol
         sv_mask = ((self.alpha > tol) | (self.alpha_star > tol)) & (residuals >= self.epsilon - tol)
 
         return {
@@ -352,100 +351,102 @@ def load_housing_data():
 
 def nested_cv_with_plots(model_class, kernel_class, X, y, outer_cv=5, inner_cv=5,
                          param_grid={}, model_name=''):
-
     epsilon = 0.5 if model_name == 'SVR' else None
     kernel_params = param_grid['kernel_param']
     lambdas = param_grid['lambda']
-    support_vectors_lambda_1 = []
-    support_vectors_best_lambda = []
 
-    mse_lambda_1 = []
-    mse_best_lambda = []
-    best_lambdas_per_kernel = []
+    results = {
+        'kernel_params': kernel_params,
+        'mse_lambda_1': [],
+        'mse_best_lambda': [],
+        'best_lambdas_per_kernel': [],
+        'support_vectors_lambda_1': [],
+        'support_vectors_best_lambda': []
+    }
 
+    # Outer loop over kernel parameters
     for kernel_param in kernel_params:
-        # --- 1. Train with lambda = 1 ---
-        sv_counts_fixed = []
-
-        if model_name == 'SVR':
-            model_fixed = model_class(kernel=kernel_class(kernel_param), lambda_=1.0, epsilon=epsilon)
-        else:
-            model_fixed = model_class(kernel=kernel_class(kernel_param), lambda_=1.0)
-
         outer_mse_fixed = []
+        outer_mse_best = []
+        sv_counts_fixed = []
+        sv_counts_best = []
+        best_lambdas = []
 
+        # Outer CV loop
         outer_kf = KFold(n_splits=outer_cv, shuffle=True, random_state=42)
 
         for train_idx, test_idx in outer_kf.split(X):
-            model_fixed.fit(X[train_idx], y[train_idx])
-            y_pred = model_fixed.predict(X[test_idx])
-            outer_mse_fixed.append(mean_squared_error(y[test_idx], y_pred))
+            X_train, X_test = X[train_idx], X[test_idx]
+            y_train, y_test = y[train_idx], y[test_idx]
+
+            # --- 1. Evaluate with lambda=1 on test set ---
+            if model_name == 'SVR':
+                model_fixed = model_class(kernel=kernel_class(kernel_param), lambda_=1.0, epsilon=epsilon)
+            else:
+                model_fixed = model_class(kernel=kernel_class(kernel_param), lambda_=1.0)
+
+            model_fixed.fit(X_train, y_train)
+            y_pred = model_fixed.predict(X_test)
+            outer_mse_fixed.append(mean_squared_error(y_test, y_pred))
 
             if model_name == 'SVR':
                 sv_info = model_fixed.get_support_vectors()
                 sv_counts_fixed.append(len(sv_info['indices']))
 
-        mse_lambda_1.append(np.mean(outer_mse_fixed))
-        if model_name == 'SVR':
-            support_vectors_lambda_1.append(np.mean(sv_counts_fixed))
+            # --- 2. Inner CV to find best lambda ---
+            best_inner_mse = np.inf
+            best_lambda = None
 
-        # --- 2. Grid search to find best lambda ---
-        best_inner_mse = np.inf
-        best_lambda = None
+            for lam in lambdas:
+                if model_name == 'SVR':
+                    model_cv = model_class(kernel=kernel_class(kernel_param), lambda_=lam, epsilon=epsilon)
+                else:
+                    model_cv = model_class(kernel=kernel_class(kernel_param), lambda_=lam)
 
-        for lam in lambdas:
+                inner_mses = []
+                inner_kf = KFold(n_splits=inner_cv, shuffle=True, random_state=42)
+
+                for inner_train_idx, inner_val_idx in inner_kf.split(X_train):
+                    X_inner_train, X_inner_val = X_train[inner_train_idx], X_train[inner_val_idx]
+                    y_inner_train, y_inner_val = y_train[inner_train_idx], y_train[inner_val_idx]
+
+                    model_cv.fit(X_inner_train, y_inner_train)
+                    y_pred = model_cv.predict(X_inner_val)
+                    inner_mses.append(mean_squared_error(y_inner_val, y_pred))
+
+                avg_inner_mse = np.mean(inner_mses)
+                if avg_inner_mse < best_inner_mse:
+                    best_inner_mse = avg_inner_mse
+                    best_lambda = lam
+
+            best_lambdas.append(round(best_lambda, 2))
+
+            # --- 3. Evaluate best lambda on test set ---
             if model_name == 'SVR':
-                model_cv = model_class(kernel=kernel_class(kernel_param), lambda_=lam, epsilon=epsilon)
+                model_best = model_class(kernel=kernel_class(kernel_param), lambda_=best_lambda, epsilon=epsilon)
             else:
-                model_cv = model_class(kernel=kernel_class(kernel_param), lambda_=lam)
+                model_best = model_class(kernel=kernel_class(kernel_param), lambda_=best_lambda)
 
-            inner_mses = []
-            inner_kf = KFold(n_splits=inner_cv, shuffle=True, random_state=42)
-            for inner_train_idx, inner_val_idx in inner_kf.split(X):
-                X_train_inner, X_val_inner = X[inner_train_idx], X[inner_val_idx]
-                y_train_inner, y_val_inner = y[inner_train_idx], y[inner_val_idx]
-
-                model_cv.fit(X_train_inner, y_train_inner)
-                y_pred = model_cv.predict(X_val_inner)
-                inner_mses.append(mean_squared_error(y_val_inner, y_pred))
-
-            avg_inner_mse = np.mean(inner_mses)
-            if avg_inner_mse < best_inner_mse:
-                best_inner_mse = avg_inner_mse
-                best_lambda = lam
-
-        best_lambdas_per_kernel.append(best_lambda)
-
-        # --- 3. Evaluate best lambda on outer folds ---
-        sv_counts_best = [] # Track SV counts per fold
-        if model_name == 'SVR':
-            model_best = model_class(kernel=kernel_class(kernel_param), lambda_=best_lambda, epsilon=epsilon)
-        else:
-            model_best = model_class(kernel=kernel_class(kernel_param), lambda_=best_lambda)
-
-        outer_mse_best = []
-
-        for train_idx, test_idx in outer_kf.split(X):
-            model_best.fit(X[train_idx], y[train_idx])
-            y_pred = model_best.predict(X[test_idx])
-            outer_mse_best.append(mean_squared_error(y[test_idx], y_pred))
+            model_best.fit(X_train, y_train)
+            y_pred = model_best.predict(X_test)
+            outer_mse_best.append(mean_squared_error(y_test, y_pred))
 
             if model_name == 'SVR':
                 sv_info = model_best.get_support_vectors()
                 sv_counts_best.append(len(sv_info['indices']))
 
-        if model_name == 'SVR':
-            support_vectors_best_lambda.append(np.mean(sv_counts_best))  # Mean across folds
-        mse_best_lambda.append(np.mean(outer_mse_best))
+        results['mse_lambda_1'].append(np.mean(outer_mse_fixed))
+        results['mse_best_lambda'].append(np.mean(outer_mse_best))
+        results['best_lambdas_per_kernel'].append(np.mean(best_lambdas))
 
-    return {
-        'kernel_params': kernel_params,
-        'mse_lambda_1': mse_lambda_1,
-        'mse_best_lambda': mse_best_lambda,
-        'best_lambdas_per_kernel': best_lambdas_per_kernel,
-        'support_vectors_lambda_1': support_vectors_lambda_1,
-        'support_vectors_best_lambda': support_vectors_best_lambda
-    }
+        if model_name == 'SVR':
+            results['support_vectors_lambda_1'].append(np.mean(sv_counts_fixed))
+            results['support_vectors_best_lambda'].append(np.mean(sv_counts_best))
+        else:
+            results['support_vectors_lambda_1'].append(None)
+            results['support_vectors_best_lambda'].append(None)
+
+    return results
 
 
 def analyze_housing_data():
@@ -484,7 +485,7 @@ def analyze_housing_data():
 
     axes[0, 0].plot(results_rbf_KRR['kernel_params'], results_rbf_KRR['mse_lambda_1'], marker='o', label='KRR RBF λ=1')
     axes[0, 0].plot(results_rbf_KRR['kernel_params'], results_rbf_KRR['mse_best_lambda'], marker='s',
-                    label=f'KRR RBF best λ = {results_rbf_KRR["best_lambdas_per_kernel"]}')
+                    label=f'KRR RBF best λ')
     axes[0, 0].set_xlabel('sigma')
     axes[0, 0].set_ylabel('MSE')
     axes[0, 0].set_title('KRR with RBF Kernel')
@@ -493,7 +494,7 @@ def analyze_housing_data():
 
     axes[0, 1].plot(results_poly_KRR['kernel_params'], results_poly_KRR['mse_lambda_1'], marker='o', label='KRR Polynomial λ=1')
     axes[0, 1].plot(results_poly_KRR['kernel_params'], results_poly_KRR['mse_best_lambda'], marker='s',
-                    label=f'KRR Poly best λ = {results_poly_KRR["best_lambdas_per_kernel"]}')
+                    label=f'KRR Poly best λ')
     axes[0, 1].set_xlabel('degree')
     axes[0, 1].set_ylabel('MSE')
     axes[0, 1].set_title('KRR with Polynomial Kernel')
