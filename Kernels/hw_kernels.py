@@ -50,10 +50,9 @@ class Polynomial:
     """
         Polynomial kernel implementation.
 
-        ```
             The polynomial kernel is defined as:
             K(x, y) = (c + x^T)^d
-        """
+    """
     def __init__(self, M):
         self.M = M
 
@@ -63,13 +62,10 @@ class Polynomial:
 class KernelizedRidgeRegression:
     """
     Kernel ridge regression:
-    - Uses the kernel trick to perform regression in high-dimensional feature spaces
-    - Solves for alpha coefficients using the closed-form solution
-    - Makes predictions using kernel evaluations between test points and training points
 
     The mathematical formulation is:
-    alpha = (K + lambda*I)^-1 y
-    where K is the kernel matrix of training data
+        alpha = (K + lambda*I)^-1 y
+        where K is the kernel matrix of training data
     """
     def __init__(self, kernel, lambda_=1.0):
         self.kernel = kernel
