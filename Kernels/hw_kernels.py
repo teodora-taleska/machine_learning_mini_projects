@@ -2,10 +2,13 @@ import numpy as np
 from cvxopt import matrix, solvers
 import matplotlib.pyplot as plt
 import pandas as pd
-from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import KFold
+from sklearn.preprocessing import StandardScaler
+from sklearn.kernel_ridge import KernelRidge
+from sklearn.svm import SVR as sklearn_SVR
+from sklearn.metrics.pairwise import rbf_kernel, polynomial_kernel
 
 # Part 1
 class RBF:
@@ -164,23 +167,24 @@ class SVR:
 
     def get_support_vectors(self, tol=1e-3):
         """
-        Returns support vectors that lie exactly on the margin (|f(x_i) - y_i| = ε).
+        Returns all support vectors (points with non-zero alpha or alpha*).
+        Includes:
+          1. Points on the margin (|f(x_i) - y_i| = ε ± tol).
+          2. Points outside the ε-tube (|f(x_i) - y_i| > ε).
         """
         y_pred = self.predict(self.X)
         residuals = np.abs(y_pred - self.y)
 
-        on_margin = np.abs(residuals - self.epsilon) < tol
-
-        sv_mask = ((self.alpha > tol) | (self.alpha_star > tol)) & on_margin
+        # Support vectors are points with non-zero alpha/alpha* AND error >= ε - tol
+        sv_mask = ((self.alpha > tol) | (self.alpha_star > tol)) & (residuals >= self.epsilon - tol)
 
         return {
             'support_vectors': self.X[sv_mask],
             'target_values': self.y[sv_mask],
             'alpha': self.alpha[sv_mask],
             'alpha_star': self.alpha_star[sv_mask],
-            'indices': np.where(sv_mask)[0] # their indices in the training set
+            'indices': np.where(sv_mask)[0]
         }
-
 
 def plot_sine_regression_demo():
     df = pd.read_csv("sine.csv")
@@ -197,22 +201,22 @@ def plot_sine_regression_demo():
     X_grid_scaled = scaler.transform(X_grid)
 
     models = {
-        "KRR with RBF": {
+        "KRR with RBF Kernel": {
             "model": KernelizedRidgeRegression(kernel=rbf_kernel, lambda_=0.1),
             "X_grid": X_grid,
             "X_used": X
         },
-        "KRR with Polynomial": {
+        "KRR with Polynomial Kernel": {
             "model": KernelizedRidgeRegression(kernel=poly_kernel, lambda_=0.001),
             "X_grid": X_grid_scaled,
             "X_used": X_scaled
         },
-        "SVR with RBF": {
+        "SVR with RBF Kernel": {
             "model": SVR(kernel=rbf_kernel, lambda_=0.01, epsilon=0.5),
             "X_grid": X_grid,
             "X_used": X
         },
-        "SVR with Polynomial": {
+        "SVR with Polynomial Kernel": {
             "model": SVR(kernel=poly_kernel, lambda_=0.01, epsilon=0.5),
             "X_grid": X_grid_scaled,
             "X_used": X_scaled
@@ -248,16 +252,94 @@ def plot_sine_regression_demo():
                 edgecolors='red',
                 s=100,
                 linewidths=2,
-                label=f"Margin SVs ({len(sv_info['indices'])})"
+                label=f"SVs ({len(sv_info['indices'])})"
             )
 
         axes[i].set_title(title)
+        axes[i].set_xlabel("x")
+        axes[i].set_ylabel("y")
         axes[i].legend()
         axes[i].grid(True)
 
     fig.tight_layout()
     plt.savefig("visualizations/sine_plot.png", dpi=300, bbox_inches='tight')
     plt.show()
+
+
+def plot_sine_regression_demo_sklearn():
+    df = pd.read_csv("sine.csv")
+    X = df["x"].values.reshape(-1, 1)
+    y = df["y"].values
+
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+
+    X_grid = np.linspace(min(X.ravel()) - 1, max(X.ravel()) + 1, 500).reshape(-1, 1)
+    X_grid_scaled = scaler.transform(X_grid)
+
+    models = {
+        "KRR with RBF Kernel": {
+            "model": KernelRidge(alpha=0.1, kernel='rbf', gamma=1.0),  # gamma = 1/(2*sigma^2)
+            "X_grid": X_grid,
+            "X_used": X
+        },
+        "KRR with Polynomial Kernel": {
+            "model": KernelRidge(alpha=0.001, kernel='poly', degree=5, coef0=1),
+            "X_grid": X_grid_scaled,
+            "X_used": X_scaled
+        },
+        "SVR with RBF Kernel": {
+            "model": sklearn_SVR(kernel='rbf', C=100, epsilon=0.5, gamma=1.0),  # C = 1/lambda
+            "X_grid": X_grid,
+            "X_used": X
+        },
+        "SVR with Polynomial Kernel": {
+            "model": sklearn_SVR(kernel='poly', C=100, epsilon=0.5, degree=5, coef0=1),
+            "X_grid": X_grid_scaled,
+            "X_used": X_scaled
+        }
+    }
+
+    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+    axes = axes.ravel()
+
+    for i, (title, entry) in enumerate(models.items()):
+        model = entry["model"]
+        X_used = entry["X_used"]
+        X_grid_used = entry["X_grid"]
+
+        model.fit(X_used, y)
+        y_pred = model.predict(X_grid_used)
+
+        axes[i].scatter(X_used, y, color="black", label="Data")
+        axes[i].plot(X_grid_used, y_pred, color="blue", label="Prediction")
+
+        if isinstance(model, sklearn_SVR):
+            y_pred_upper = y_pred + model.epsilon
+            y_pred_lower = y_pred - model.epsilon
+            axes[i].plot(X_grid_used, y_pred_upper, color="blue", linestyle="--", label="ε-tube")
+            axes[i].plot(X_grid_used, y_pred_lower, color="blue", linestyle="--")
+
+            axes[i].scatter(
+                X_used[model.support_],
+                y[model.support_],
+                facecolors='none',
+                edgecolors='red',
+                s=100,
+                linewidths=2,
+                label=f"SVs ({len(model.support_)})"
+            )
+
+        axes[i].set_title(title)
+        axes[i].set_xlabel("x")
+        axes[i].set_ylabel("y")
+        axes[i].legend()
+        axes[i].grid(True)
+
+    fig.tight_layout()
+    plt.savefig("visualizations/sine_plot_sklearn.png", dpi=300, bbox_inches='tight')
+    plt.show()
+
 
 
 # Part 2
@@ -465,11 +547,13 @@ def analyze_housing_data():
                             textcoords="offset points", xytext=(0, -15), ha='center', fontsize=8, color='orange')
 
 
-    fig.subplots_adjust(hspace=0.3)
+    fig.tight_layout()
+    fig.subplots_adjust(hspace=0.2, wspace=0.1)
     plt.savefig('visualizations/compare_KRR_SVR_kernels_individual.png')
     plt.show()
 
 
 if __name__ == "__main__":
     # plot_sine_regression_demo()
-    analyze_housing_data()
+    plot_sine_regression_demo_sklearn()
+    # analyze_housing_data()
