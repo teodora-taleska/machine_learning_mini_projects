@@ -7,7 +7,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import KFold
 
-
 # Part 1
 class RBF:
     """
@@ -23,55 +22,41 @@ class RBF:
         self.gamma = 1.0 / (2 * sigma ** 2)
 
     def __call__(self, A, B):
-        if B is None:
-            B = A
+        if A.ndim == 1:
+            A = A[np.newaxis, :]
+        if B.ndim == 1:
+            B = B[np.newaxis, :]
 
-        # Convert inputs to 2D arrays if they're 1D
-        A_2d = np.atleast_2d(A)
-        B_2d = np.atleast_2d(B)
+        A_sq = np.sum(A ** 2, axis=1)[:, np.newaxis]
+        B_sq = np.sum(B ** 2, axis=1)[np.newaxis, :]
 
-        # squared norms
-        A_sq = np.sum(A_2d ** 2, axis=1)[:, np.newaxis]
-        B_sq = np.sum(B_2d ** 2, axis=1)[np.newaxis, :]
+        # ||x-y||² = x² - 2xy + y²
+        distances = A_sq - 2 * np.dot(A, B.T) + B_sq
 
-        distances = A_sq + B_sq - 2 * np.dot(A_2d, B_2d.T)
+        gamma = 1.0 / (2 * self.sigma ** 2)
+        K = np.exp(-gamma * distances)
 
-        result = np.exp(-self.gamma * distances)
-
-        if A.ndim == 1 and B.ndim == 1:
-            return result[0, 0] # scalar
-        elif A.ndim == 1 or B.ndim == 1:
-            return result.ravel() # 1D array
+        if K.shape == (1, 1):
+            return K[0, 0]
+        elif K.shape[0] == 1 or K.shape[1] == 1:
+            return K.ravel()
         else:
-            return result
+            return K
+
 
 class Polynomial:
     """
-    Polynomial kernel implementation.
+        Polynomial kernel implementation.
 
-    ```
-        The polynomial kernel is defined as:
-        K(x, y) = (x^T gamma + c)^d
-    """
-    def __init__(self, M=2, gamma=1.0, c=1.0):
+        ```
+            The polynomial kernel is defined as:
+            K(x, y) = (c + x^T)^d
+        """
+    def __init__(self, M):
         self.M = M
-        self.gamma = gamma
-        self.c = c
 
     def __call__(self, A, B):
-        A_2d = np.atleast_2d(A)
-        B_2d = np.atleast_2d(B)
-
-        dot_product = np.dot(A_2d, B_2d.T)
-
-        result = (self.gamma * dot_product + self.c) ** self.M
-
-        if A.ndim == 1 and B.ndim == 1:
-            return result[0, 0]
-        elif A.ndim == 1 or B.ndim == 1:
-            return result.ravel()
-        else:
-            return result
+        return (1 + np.dot(A, B.T)) ** self.M
 
 class KernelizedRidgeRegression:
     """
@@ -116,8 +101,11 @@ class SVR:
         self.b = None
         self.alpha = None
         self.alpha_star = None
+        self.X = None
+        self.y = None
 
     def fit(self, X, y):
+        self.y = y
         n = X.shape[0]
         K = np.asarray(self.kernel(X, X))
         C = 1 / self.lambda_
@@ -126,46 +114,44 @@ class SVR:
         for i in range(n):
             for j in range(n):
                 kij = K[i, j]
-                # interleaved: P[2i, 2j] = K, P[2i+1, 2j+1] = K, P[2i, 2j+1] = -K, ...
-                P[2 * i, 2 * j] = kij           # α_i * α_j
-                P[2 * i + 1, 2 * j + 1] = kij   # α*_i * α*_j
-                P[2 * i, 2 * j + 1] = -kij      # α_i * α*_j
-                P[2 * i + 1, 2 * j] = -kij      # α*_i * α_j
+                P[2 * i, 2 * j] = kij  # α_i α_j term
+                P[2 * i + 1, 2 * j + 1] = kij  # α_i^* α_j^* term
+                P[2 * i, 2 * j + 1] = -kij  # -α_i α_j^* term
+                P[2 * i + 1, 2 * j] = -kij  # -α_i^* α_j term
+        P = P + 1e-8 * np.eye(2 * n)  # Stabilize P
         P = matrix(P)
 
         q = np.zeros(2 * n)
         for i in range(n):
-            q[2 * i]     = self.epsilon - y[i]  # for α_i
-            q[2 * i + 1] = self.epsilon + y[i]  # for α*_i
+            q[2 * i] = self.epsilon - y[i] # y_i - ε ... coef for α_i
+            q[2 * i + 1] = self.epsilon + y[i]  # y_i + ε ... coef for α*_i
         q = matrix(q)
 
         G = np.vstack([-np.eye(2 * n), np.eye(2 * n)])
         h = np.hstack([np.zeros(2 * n), np.ones(2 * n) * C])
         G, h = matrix(G), matrix(h)
 
-        # Constraints: α_i + α*_i = 0
         A = np.zeros((1, 2 * n))
         for i in range(n):
-            A[0, 2 * i] = 1       # α_i
-            A[0, 2 * i + 1] = -1  # α*_i
+            A[0, 2 * i] = 1 # α_i term
+            A[0, 2 * i + 1] = -1 # α*_i term
         A = matrix(A)
-        b = matrix(np.array([0.0]))
+        b = matrix(np.array([0.0])) # b = 0 .. the RHS of the constraint
 
         sol = solvers.qp(P, q, G, h, A, b)
         dual_vars = np.array(sol['x']).flatten()
         self.b = sol['y'][0]
 
-        self.alpha = dual_vars[0::2]      # even indices
-        self.alpha_star = dual_vars[1::2] # odd indices
+        C = 1 / self.lambda_
+        self.alpha = np.clip(dual_vars[0::2], 0, C)      # Clip to [0, C]
+        self.alpha_star = np.clip(dual_vars[1::2], 0, C) # Clip to [0, C]
         self.X = X
-        self.y = y
-        self.K = K
         return self
 
     def predict(self, Xtest):
         kernel_output = self.kernel(Xtest, self.X)
         coeff = self.alpha - self.alpha_star
-        return (kernel_output @ coeff + self.get_b()).flatten() # (1, n) instead of (n,)
+        return (kernel_output @ coeff + self.get_b()).flatten()
 
     def get_alpha(self):
         interleaved = np.empty(2 * len(self.alpha))
@@ -175,6 +161,25 @@ class SVR:
 
     def get_b(self):
         return self.b
+
+    def get_support_vectors(self, tol=1e-3):
+        """
+        Returns support vectors that lie exactly on the margin (|f(x_i) - y_i| = ε).
+        """
+        y_pred = self.predict(self.X)
+        residuals = np.abs(y_pred - self.y)
+
+        on_margin = np.abs(residuals - self.epsilon) < tol
+
+        sv_mask = ((self.alpha > tol) | (self.alpha_star > tol)) & on_margin
+
+        return {
+            'support_vectors': self.X[sv_mask],
+            'target_values': self.y[sv_mask],
+            'alpha': self.alpha[sv_mask],
+            'alpha_star': self.alpha_star[sv_mask],
+            'indices': np.where(sv_mask)[0] # their indices in the training set
+        }
 
 
 def plot_sine_regression_demo():
@@ -186,7 +191,7 @@ def plot_sine_regression_demo():
     X_scaled = scaler.fit_transform(X)
 
     rbf_kernel = RBF(sigma=1.0)
-    poly_kernel = Polynomial(M=5, gamma=0.5, c=2.0)
+    poly_kernel = Polynomial(M=5)
 
     X_grid = np.linspace(min(X.ravel()) - 1, max(X.ravel()) + 1, 500).reshape(-1, 1)
     X_grid_scaled = scaler.transform(X_grid)
@@ -203,12 +208,12 @@ def plot_sine_regression_demo():
             "X_used": X_scaled
         },
         "SVR with RBF": {
-            "model": SVR(kernel=rbf_kernel, lambda_=0.1, epsilon=0.1),
+            "model": SVR(kernel=rbf_kernel, lambda_=0.01, epsilon=0.5),
             "X_grid": X_grid,
             "X_used": X
         },
         "SVR with Polynomial": {
-            "model": SVR(kernel=poly_kernel, lambda_=0.001, epsilon=0.1),
+            "model": SVR(kernel=poly_kernel, lambda_=0.01, epsilon=0.5),
             "X_grid": X_grid_scaled,
             "X_used": X_scaled
         }
@@ -229,16 +234,29 @@ def plot_sine_regression_demo():
         axes[i].plot(X_grid_used, y_pred, color="blue", label="Prediction")
 
         if isinstance(model, SVR):
-            alpha_combined = model.get_alpha()
-            support_indices = np.where(np.abs(alpha_combined).sum(axis=1) > 1e-5)[0]
-            axes[i].scatter(X_used[support_indices], y[support_indices], facecolors='none', edgecolors='red', label="Support Vectors", s=80)
+            y_pred_upper = y_pred + model.epsilon
+            y_pred_lower = y_pred - model.epsilon
+            axes[i].plot(X_grid_used, y_pred_upper, color="blue", linestyle="--", label="ε-tube")
+            axes[i].plot(X_grid_used, y_pred_lower, color="blue", linestyle="--")
+
+            sv_info = model.get_support_vectors()
+
+            axes[i].scatter(
+                sv_info['support_vectors'],
+                sv_info['target_values'],
+                facecolors='none',
+                edgecolors='red',
+                s=100,
+                linewidths=2,
+                label=f"Margin SVs ({len(sv_info['indices'])})"
+            )
 
         axes[i].set_title(title)
         axes[i].legend()
         axes[i].grid(True)
 
-    fig.subplots_adjust(hspace=0.2, wspace=0.2)
-    plt.savefig("visualizations/sine_plot.png")
+    fig.tight_layout()
+    plt.savefig("visualizations/sine_plot.png", dpi=300, bbox_inches='tight')
     plt.show()
 
 
@@ -265,6 +283,8 @@ def nested_cv_with_plots(model_class, kernel_class, X, y, outer_cv=5, inner_cv=5
 
     for kernel_param in kernel_params:
         # --- 1. Train with lambda = 1 ---
+        sv_counts_fixed = []
+
         if model_name == 'SVR':
             model_fixed = model_class(kernel=kernel_class(kernel_param), lambda_=1.0, epsilon=epsilon)
         else:
@@ -275,15 +295,18 @@ def nested_cv_with_plots(model_class, kernel_class, X, y, outer_cv=5, inner_cv=5
         outer_kf = KFold(n_splits=outer_cv, shuffle=True, random_state=42)
 
         for train_idx, test_idx in outer_kf.split(X):
-            X_train, X_test = X[train_idx], X[test_idx]
-            y_train, y_test = y[train_idx], y[test_idx]
+            model_fixed.fit(X[train_idx], y[train_idx])
+            y_pred = model_fixed.predict(X[test_idx])
+            outer_mse_fixed.append(mean_squared_error(y[test_idx], y_pred))
 
-            model_fixed.fit(X_train, y_train)
-            y_pred = model_fixed.predict(X_test)
-            outer_mse_fixed.append(mean_squared_error(y_test, y_pred))
-        if model_name == 'SVR':
-            support_vectors_lambda_1.append(len(model_fixed.get_alpha()))
+            if model_name == 'SVR':
+                # Use get_support_vectors() instead of manual counting
+                sv_info = model_fixed.get_support_vectors()
+                sv_counts_fixed.append(len(sv_info['indices']))  # Count SVs
+
         mse_lambda_1.append(np.mean(outer_mse_fixed))
+        if model_name == 'SVR':
+            support_vectors_lambda_1.append(np.mean(sv_counts_fixed))
 
         # --- 2. Grid search to find best lambda ---
         best_inner_mse = np.inf
@@ -313,6 +336,7 @@ def nested_cv_with_plots(model_class, kernel_class, X, y, outer_cv=5, inner_cv=5
         best_lambdas_per_kernel.append(best_lambda)
 
         # --- 3. Evaluate best lambda on outer folds ---
+        sv_counts_best = [] # Track SV counts per fold
         if model_name == 'SVR':
             model_best = model_class(kernel=kernel_class(kernel_param), lambda_=best_lambda, epsilon=epsilon)
         else:
@@ -321,14 +345,17 @@ def nested_cv_with_plots(model_class, kernel_class, X, y, outer_cv=5, inner_cv=5
         outer_mse_best = []
 
         for train_idx, test_idx in outer_kf.split(X):
-            X_train, X_test = X[train_idx], X[test_idx]
-            y_train, y_test = y[train_idx], y[test_idx]
+            model_best.fit(X[train_idx], y[train_idx])
+            y_pred = model_best.predict(X[test_idx])
+            outer_mse_best.append(mean_squared_error(y[test_idx], y_pred))
 
-            model_best.fit(X_train, y_train)
-            y_pred = model_best.predict(X_test)
-            outer_mse_best.append(mean_squared_error(y_test, y_pred))
+            if model_name == 'SVR':
+                # Use get_support_vectors() instead of manual counting
+                sv_info = model_best.get_support_vectors()
+                sv_counts_best.append(len(sv_info['indices']))
+
         if model_name == 'SVR':
-            support_vectors_best_lambda.append(len(model_best.get_alpha()))
+            support_vectors_best_lambda.append(np.mean(sv_counts_best))  # Mean across folds
         mse_best_lambda.append(np.mean(outer_mse_best))
 
     return {
@@ -355,7 +382,7 @@ def analyze_housing_data():
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     X_train = scaler.fit_transform(X_train)
-    X_test = scaler.transform(X_test)
+    # X_test = scaler.transform(X_test)
 
     results_rbf_KRR = nested_cv_with_plots(KernelizedRidgeRegression, lambda s: RBF(sigma=s), X_train, y_train,
                                             param_grid=param_grid_rbf,
@@ -393,18 +420,28 @@ def analyze_housing_data():
     axes[0, 1].grid(True)
     axes[0, 1].legend()
 
-    axes[1, 0].plot(results_rbf_SVR['kernel_params'], results_rbf_SVR['mse_lambda_1'], marker='o', label='SVR RBF λ=1')
-    axes[1, 0].plot(results_rbf_SVR['kernel_params'], results_rbf_SVR['mse_best_lambda'], marker='s',
-                    label=f'SVR RBF best λ = {results_rbf_SVR["best_lambdas_per_kernel"]}')
+    axes[1, 0].plot(
+        results_rbf_SVR['kernel_params'], results_rbf_SVR['mse_lambda_1'],
+        marker='o', label=f'SVR RBF λ=1 (Avg SVs={np.mean(results_rbf_SVR["support_vectors_lambda_1"]):.1f})'
+    )
+    axes[1, 0].plot(
+        results_rbf_SVR['kernel_params'], results_rbf_SVR['mse_best_lambda'],
+        marker='s', label=f'SVR RBF best λ (Avg SVs={np.mean(results_rbf_SVR["support_vectors_best_lambda"]):.1f})',
+    )
     axes[1, 0].set_xlabel('sigma')
     axes[1, 0].set_ylabel('MSE')
     axes[1, 0].set_title('SVR with RBF Kernel')
     axes[1, 0].grid(True)
     axes[1, 0].legend()
 
-    axes[1, 1].plot(results_poly_SVR['kernel_params'], results_poly_SVR['mse_lambda_1'], marker='o', label='SVR Polynomial λ=1')
-    axes[1, 1].plot(results_poly_SVR['kernel_params'], results_poly_SVR['mse_best_lambda'], marker='s',
-                    label=f'SVR Poly best λ = {results_poly_SVR["best_lambdas_per_kernel"]}')
+    axes[1, 1].plot(
+        results_poly_SVR['kernel_params'], results_poly_SVR['mse_lambda_1'],
+        marker='o', label=f'SVR RBF λ=1 (Avg SVs={np.mean(results_poly_SVR["support_vectors_lambda_1"]):.1f})'
+    )
+    axes[1, 1].plot(
+        results_poly_SVR['kernel_params'], results_poly_SVR['mse_best_lambda'],
+        marker='s', label=f'SVR RBF best λ (Avg SVs={np.mean(results_poly_SVR["support_vectors_best_lambda"]):.1f})',
+    )
     axes[1, 1].set_xlabel('degree')
     axes[1, 1].set_ylabel('MSE')
     axes[1, 1].set_title('SVR with Polynomial Kernel')
@@ -417,7 +454,7 @@ def analyze_housing_data():
                             textcoords="offset points", xytext=(0, 10), ha='center', fontsize=8, color='blue')
         axes[1, 0].annotate(f'{results_rbf_SVR["support_vectors_best_lambda"][i]}',
                             (param, results_rbf_SVR['mse_best_lambda'][i]),
-                            textcoords="offset points", xytext=(0, -15), ha='center', fontsize=8, color='green')
+                            textcoords="offset points", xytext=(0, -15), ha='center', fontsize=8, color='orange')
 
     for i, param in enumerate(results_poly_SVR['kernel_params']):
         axes[1, 1].annotate(f'{results_poly_SVR["support_vectors_lambda_1"][i]}',
@@ -425,12 +462,14 @@ def analyze_housing_data():
                             textcoords="offset points", xytext=(0, 10), ha='center', fontsize=8, color='blue')
         axes[1, 1].annotate(f'{results_poly_SVR["support_vectors_best_lambda"][i]}',
                             (param, results_poly_SVR['mse_best_lambda'][i]),
-                            textcoords="offset points", xytext=(0, -15), ha='center', fontsize=8, color='green')
+                            textcoords="offset points", xytext=(0, -15), ha='center', fontsize=8, color='orange')
+
 
     fig.subplots_adjust(hspace=0.3)
     plt.savefig('visualizations/compare_KRR_SVR_kernels_individual.png')
     plt.show()
 
+
 if __name__ == "__main__":
-    plot_sine_regression_demo()
-    # analyze_housing_data()
+    # plot_sine_regression_demo()
+    analyze_housing_data()
