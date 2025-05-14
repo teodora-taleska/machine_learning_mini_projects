@@ -4,9 +4,26 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from skimage.feature import local_binary_pattern
 import matplotlib.pyplot as plt
-from hw_kernels import KernelizedRidgeRegression, SVR, RBF
+from hw_kernels import SVR, RBF
 from tqdm import tqdm
 
+
+def select_filenames_with_step(filenames, max_samples, step=7):
+    selected = []
+    used_indices = set()
+
+    i = 0
+    while len(selected) < max_samples:
+        idx = (i * step) % len(filenames)
+        if idx not in used_indices:
+            selected.append(filenames[idx])
+            used_indices.add(idx)
+        i += 1
+        # Stop early if all images are used
+        if len(used_indices) == len(filenames):
+            break
+
+    return selected
 
 def load_utkface_data(path, target_size=(64, 64), max_samples=23708):
     images = []
@@ -15,11 +32,7 @@ def load_utkface_data(path, target_size=(64, 64), max_samples=23708):
 
     filenames = sorted(os.listdir(path))
 
-    # First, take every 7th image
-    step_filenames = filenames[::7]
-    # Then, take the remaining images to fill up to max_samples ... opting for more balanced dataset
-    remaining_filenames = [f for f in filenames if f not in step_filenames]
-    selected_filenames = step_filenames + remaining_filenames[:max_samples - len(step_filenames)]
+    selected_filenames = select_filenames_with_step(filenames, max_samples=max_samples)
 
     for filename in tqdm(selected_filenames, desc="Processing images"):
         if filename.endswith('.jpg'):
@@ -55,9 +68,8 @@ class NaiveImageKernel:
 
         return result
 
-
 class LBPKernel:
-    """Local Binary Pattern kernel for facial age estimation"""
+    """LBP Kernel with Chi-Square distance."""
 
     def __init__(self, sigma=1.0, radius=2, n_points=8):
         self.sigma = sigma
@@ -72,6 +84,13 @@ class LBPKernel:
         hist = hist.astype("float")
         hist /= (hist.sum() + 1e-6)
         return hist
+
+    def _chi2_distance(self, x, Y):
+        # Efficient vectorized chi-square between one vector x and array Y
+        numerator = (x - Y) ** 2
+        denominator = x + Y + 1e-10  # prevent division by zero
+        chi2 = np.sum(numerator / denominator, axis=1)
+        return np.exp(-self.gamma * chi2)
 
     def __call__(self, A, B=None):
         if B is None:
@@ -91,11 +110,12 @@ class LBPKernel:
         hist_B = np.array(hist_B)
 
         distances = np.zeros((len(A), len(B)))
-        for i in tqdm(range(len(A)), desc="Computing distances"):
-            diff = np.linalg.norm(hist_A[i] - hist_B, axis=1)
-            distances[i] = np.exp(-self.gamma * diff)
+        for i in tqdm(range(len(A)), desc="Computing Chi-Square kernel"):
+            distances[i] = self._chi2_distance(hist_A[i], hist_B)
 
         return distances
+
+
 
 def plot_all_predictions(results, X_test, y_test):
     plt.figure(figsize=(15, 10))
@@ -112,7 +132,7 @@ def plot_all_predictions(results, X_test, y_test):
         plt.grid()
 
     plt.tight_layout()
-    plt.savefig('visualizations/age_predictions.png')
+    plt.savefig('age_predictions.png')
     plt.show()
 
 
@@ -128,7 +148,7 @@ def plot_error_distribution(results, X_test, y_test):
     plt.title('Error Distribution Across Models')
     plt.legend()
     plt.grid()
-    plt.savefig('visualizations/age_error_distribution.png')
+    plt.savefig('age_error_distribution.png')
     plt.show()
 
 
