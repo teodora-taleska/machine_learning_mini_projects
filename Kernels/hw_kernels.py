@@ -549,6 +549,6 @@ def analyze_housing_data():
 
 
 if __name__ == "__main__":
-    # plot_sine_regression_demo()
-    # plot_sine_regression_demo_sklearn()
+    plot_sine_regression_demo()
+    plot_sine_regression_demo_sklearn()
     analyze_housing_data()
