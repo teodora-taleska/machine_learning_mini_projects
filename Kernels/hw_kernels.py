@@ -153,8 +153,8 @@ class SVR:
 
     def get_alpha(self):
         interleaved = np.empty(2 * len(self.alpha))
-        interleaved[0::2] = self.alpha
-        interleaved[1::2] = self.alpha_star
+        interleaved[0::2] = self.alpha # fills even indices with α_i
+        interleaved[1::2] = self.alpha_star # fills odd indices with α*_i
         return interleaved.reshape(-1, 2)  # rows: [α_i, α*_i]
 
     def get_b(self):
